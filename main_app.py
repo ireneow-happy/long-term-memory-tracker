@@ -9,8 +9,8 @@ from googleapiclient.discovery import build
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["GOOGLE_SERVICE_ACCOUNT"]
 )
-sheet_url = st.secrets["general"]["GOOGLE_SHEET_URL"]
-sheet_tab = st.secrets["general"]["GOOGLE_SHEET_TAB"]
+sheet_url = st.secrets["GOOGLE_SHEET_URL"]
+sheet_tab = st.secrets["GOOGLE_SHEET_TAB"]
 spreadsheet_id = sheet_url.split("/d/")[1].split("/")[0]
 
 service = build("sheets", "v4", credentials=credentials)
@@ -27,6 +27,8 @@ df = pd.DataFrame(data, columns=headers) if data else pd.DataFrame(columns=heade
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
 st.title("🌀 記憶追蹤器")
 st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
+
+# --- 顯示資料 ---
 st.dataframe(df)
 
 # --- 自動產生 Snippet ID ---
@@ -35,7 +37,7 @@ today_str = today.strftime("%Y%m%d")
 existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)].shape[0]
 new_snippet_id = f"{today_str}-{existing_count+1:02d}"
 
-# --- 表單 ---
+# --- 表單：新增 Snippet ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
     col1, col2 = st.columns(2)
@@ -72,3 +74,25 @@ with st.form("add_snippet_form"):
         ).execute()
 
         st.success("✅ Snippet 已新增！請重新整理查看最新內容。")
+
+# --- 表單：修改 Snippet ---
+st.markdown("## 🛠 修改 Snippet")
+if not df.empty:
+    editable_ids = df["snippet_id"].unique()
+    selected_id = st.selectbox("選擇要修改的 Snippet ID", editable_ids)
+    row_to_edit = df[df["snippet_id"] == selected_id].iloc[0]
+
+    with st.form("edit_snippet_form"):
+        new_content = st.text_area("更新內容", row_to_edit["snippet_content"])
+        submitted_edit = st.form_submit_button("更新內容")
+        if submitted_edit:
+            for i, row in enumerate(data):
+                if row[2] == selected_id:
+                    data[i][3] = new_content
+            sheet.values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"{sheet_tab}!A2",
+                valueInputOption="USER_ENTERED",
+                body={"values": data}
+            ).execute()
+            st.success("✅ Snippet 已更新！請重新整理查看最新內容。")
