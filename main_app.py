@@ -61,8 +61,8 @@ with st.form("add_snippet_form"):
         snippet_date = st.date_input("建立日期", value=today)
 
     st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
-    snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
-    review_days = st.text_input("回顧日（以逗號分隔）", value=st.session_state["review_days"])
+    st.text_area("內容", key="snippet_content")
+    st.text_input("回顧日（以逗號分隔）", key="review_days")
 
     submitted = st.form_submit_button("新增")
     if submitted:
