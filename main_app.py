@@ -69,7 +69,6 @@ with st.form("add_snippet_form"):
             valueInputOption="USER_ENTERED",
             body={"values": rows_to_add}
         ).execute()
-
         st.success("✅ Snippet 已新增！請重新整理查看最新內容。")
 
 # --- 修改 Snippet ---
@@ -84,12 +83,12 @@ if selected_id:
         old_type = snippet_rows.iloc[0]["snippet_type"]
         old_date = snippet_rows.iloc[0]["date_created"]
         old_content = snippet_rows.iloc[0]["snippet_content"]
+        ordered_options = ["note", "vocab", "quote", "other"]
 
         with st.form("edit_form"):
             col1, col2 = st.columns(2)
             with col1:
-                ordered_options = ["note", "vocab", "quote", "other"]
-new_type = st.selectbox("類型", ordered_options, index=ordered_options.index(old_type))
+                new_type = st.selectbox("類型", ordered_options, index=ordered_options.index(old_type))
             with col2:
                 new_date = st.date_input("建立日期", value=datetime.datetime.strptime(old_date, "%Y-%m-%d").date())
             new_content = st.text_area("內容", value=old_content)
@@ -120,6 +119,7 @@ new_type = st.selectbox("類型", ordered_options, index=ordered_options.index(o
                     body={"values": updated_rows}
                 ).execute()
                 st.success("✅ Snippet 已更新。")
+                st.rerun()
 
 # --- 刪除 Snippet ---
 st.markdown("---")
