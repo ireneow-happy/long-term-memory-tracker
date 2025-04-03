@@ -39,7 +39,7 @@ st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
     col1, col2 = st.columns(2)
     with col1:
-        snippet_type = st.selectbox("類型", ["quote", "vocab", "note", "other"])
+        snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
     with col2:
         snippet_date = st.date_input("建立日期", value=today)
 
@@ -88,7 +88,8 @@ if selected_id:
         with st.form("edit_form"):
             col1, col2 = st.columns(2)
             with col1:
-                new_type = st.selectbox("類型", ["quote", "vocab", "note", "other"], index=["quote", "vocab", "note", "other"].index(old_type))
+                ordered_options = ["note", "vocab", "quote", "other"]
+new_type = st.selectbox("類型", ordered_options, index=ordered_options.index(old_type))
             with col2:
                 new_date = st.date_input("建立日期", value=datetime.datetime.strptime(old_date, "%Y-%m-%d").date())
             new_content = st.text_area("內容", value=old_content)
