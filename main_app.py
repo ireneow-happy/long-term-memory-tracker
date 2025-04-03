@@ -3,96 +3,65 @@ import streamlit as st
 import pandas as pd
 import datetime
 from google.oauth2 import service_account
-from googleapiclient.discovery import build
+import gspread
 
-# --- Google Sheets 驗證 ---
+# 認證與連接 Google Sheets
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["GOOGLE_SERVICE_ACCOUNT"]
 )
-sheet_url = st.secrets["GOOGLE_SHEET_URL"]
-sheet_tab = st.secrets["GOOGLE_SHEET_TAB"]
-spreadsheet_id = sheet_url.split("/d/")[1].split("/")[0]
+gc = gspread.authorize(credentials)
+sheet_url = st.secrets["GOOGLE_SERVICE_ACCOUNT"]["GOOGLE_SHEET_URL"]
+sheet_tab = st.secrets["GOOGLE_SERVICE_ACCOUNT"]["GOOGLE_SHEET_TAB"]
+sh = gc.open_by_url(sheet_url)
+worksheet = sh.worksheet(sheet_tab)
 
-service = build("sheets", "v4", credentials=credentials)
-sheet = service.spreadsheets()
+# 載入資料
+data = worksheet.get_all_records()
+df = pd.DataFrame(data)
 
-# --- 載入資料 ---
-result = sheet.values().get(spreadsheetId=spreadsheet_id, range=sheet_tab).execute()
-values = result.get("values", [])
-headers = values[0] if values else []
-data = values[1:] if len(values) > 1 else []
-df = pd.DataFrame(data, columns=headers) if data else pd.DataFrame(columns=headers)
-
-# --- UI 設定 ---
-st.set_page_config(page_title="記憶追蹤器", layout="centered")
-st.title("🌀 記憶追蹤器")
+st.title("🧠 記憶追蹤器")
 st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 
-# --- 顯示資料 ---
-st.dataframe(df)
+# 顯示現有 Snippets 表格
+st.dataframe(df if not df.empty else pd.DataFrame(columns=[
+    "date_created", "snippet_type", "snippet_id", "snippet_content", "review_date", "completed"
+]))
 
-# --- 自動產生 Snippet ID ---
-today = datetime.date.today()
-today_str = today.strftime("%Y%m%d")
+st.markdown("---")
+st.header("➕ 新增 Snippet")
+
+col1, col2 = st.columns(2)
+with col1:
+    snippet_type = st.selectbox("類型", ["quote", "vocabulary", "concept", "other"])
+with col2:
+    date_created = st.date_input("建立日期", datetime.date.today())
+
+today_str = date_created.strftime("%Y%m%d")
 existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)].shape[0]
-new_snippet_id = f"{today_str}-{existing_count+1:02d}"
+snippet_id = f"{today_str}-{existing_count + 1:02d}"
 
-# --- 表單：新增 Snippet ---
-st.markdown("## ➕ 新增 Snippet")
-with st.form("add_snippet_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        snippet_type = st.selectbox("類型", ["quote", "vocab", "note", "other"])
-    with col2:
-        snippet_date = st.date_input("建立日期", value=today)
+snippet_content = st.text_area("內容")
+if st.button("新增"):
+    if snippet_content.strip() == "":
+        st.warning("請輸入內容")
+    else:
+        new_row = [str(date_created), snippet_type, snippet_id, snippet_content, "", ""]
+        worksheet.append_row(new_row)
+        st.success(f"已新增 snippet：{snippet_id}")
 
-    st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
-    snippet_content = st.text_area("內容")
-    review_days = st.text_input("回顧日（以逗號分隔）", "1,3,7,14,30")
-
-    submitted = st.form_submit_button("新增")
-    if submitted:
-        rows_to_add = []
-        for day in review_days.split(","):
-            day = day.strip()
-            if day.isdigit():
-                review_date = snippet_date + datetime.timedelta(days=int(day))
-                rows_to_add.append([
-                    snippet_date.strftime("%Y-%m-%d"),
-                    snippet_type,
-                    new_snippet_id,
-                    snippet_content,
-                    review_date.strftime("%Y-%m-%d"),
-                    "FALSE"
-                ])
-
-        sheet.values().append(
-            spreadsheetId=spreadsheet_id,
-            range=sheet_tab,
-            valueInputOption="USER_ENTERED",
-            body={"values": rows_to_add}
-        ).execute()
-
-        st.success("✅ Snippet 已新增！請重新整理查看最新內容。")
-
-# --- 表單：修改 Snippet ---
-st.markdown("## 🛠 修改 Snippet")
+# 編輯 Snippet 區塊
+st.markdown("---")
+st.header("✏️ 修改 Snippet")
 if not df.empty:
-    editable_ids = df["snippet_id"].unique()
-    selected_id = st.selectbox("選擇要修改的 Snippet ID", editable_ids)
-    row_to_edit = df[df["snippet_id"] == selected_id].iloc[0]
+    snippet_to_edit = st.selectbox("選擇要修改的 Snippet ID", df["snippet_id"])
+    row_idx = df.index[df["snippet_id"] == snippet_to_edit].tolist()[0]
 
-    with st.form("edit_snippet_form"):
-        new_content = st.text_area("更新內容", row_to_edit["snippet_content"])
-        submitted_edit = st.form_submit_button("更新內容")
-        if submitted_edit:
-            for i, row in enumerate(data):
-                if row[2] == selected_id:
-                    data[i][3] = new_content
-            sheet.values().update(
-                spreadsheetId=spreadsheet_id,
-                range=f"{sheet_tab}!A2",
-                valueInputOption="USER_ENTERED",
-                body={"values": data}
-            ).execute()
-            st.success("✅ Snippet 已更新！請重新整理查看最新內容。")
+    new_type = st.selectbox("修改類型", ["quote", "vocabulary", "concept", "other"], index=["quote", "vocabulary", "concept", "other"].index(df.loc[row_idx, "snippet_type"]))
+    new_content = st.text_area("修改內容", df.loc[row_idx, "snippet_content"])
+
+    if st.button("儲存修改"):
+        worksheet.update_cell(row_idx + 2, 2, new_type)  # snippet_type
+        worksheet.update_cell(row_idx + 2, 4, new_content)  # snippet_content
+        st.success("修改完成！")
+else:
+    st.info("目前還沒有任何 snippet 可供修改。")
