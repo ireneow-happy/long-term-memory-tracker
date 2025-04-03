@@ -125,24 +125,26 @@ st.markdown("---")
 st.markdown("## 🗑️ 刪除 Snippet")
 selected_del_id = st.selectbox("選擇要刪除的 Snippet ID", unique_ids, key="delete")
 
-if confirm:
-            indices_to_delete = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id]
-            delete_requests = [{
-                "deleteDimension": {
-                    "range": {
-                        "sheetId": 0,
-                        "dimension": "ROWS",
-                        "startIndex": index,
-                        "endIndex": index + 1
-                    }
+if selected_del_id:
+    confirm = st.button("確認刪除")
+    if confirm:
+        indices_to_delete = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id]
+        delete_requests = [{
+            "deleteDimension": {
+                "range": {
+                    "sheetId": 0,
+                    "dimension": "ROWS",
+                    "startIndex": index,
+                    "endIndex": index + 1
                 }
-            } for index in sorted(indices_to_delete, reverse=True)]
-            
-            if delete_requests:
-                sheet.batchUpdate(
-                    spreadsheetId=spreadsheet_id,
-                    body={"requests": delete_requests}
-                ).execute()
-            
-            st.success("✅ Snippet 已刪除。")
-            st.experimental_rerun()
+            }
+        } for index in sorted(indices_to_delete, reverse=True)]
+
+        if delete_requests:
+            sheet.batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": delete_requests}
+            ).execute()
+
+        st.success("✅ Snippet 已刪除。")
+        st.experimental_rerun()
