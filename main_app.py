@@ -27,7 +27,6 @@ df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataF
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
 st.title("🌀 記憶追蹤器")
 st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
-st.dataframe(df)
 
 # --- 自動產生 Snippet ID ---
 today = datetime.date.today()
