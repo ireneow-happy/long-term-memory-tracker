@@ -67,7 +67,7 @@ with st.form("add_snippet_form"):
     submitted = st.form_submit_button("新增")
     if submitted:
         rows_to_add = []
-        for day in review_days.split(","):
+        for day in st.session_state["review_days"].split(","):
             day = day.strip()
             if day.isdigit():
                 review_date = snippet_date + datetime.timedelta(days=int(day))
