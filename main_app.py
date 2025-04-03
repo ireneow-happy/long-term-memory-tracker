@@ -83,8 +83,8 @@ if selected_id:
     snippet_rows = df[df["snippet_id"] == selected_id]
     if not snippet_rows.empty:
         old_type = snippet_rows.iloc[0]["snippet_type"]
-        old_date = snippet_rows.iloc[0]["created_date"]
-        old_content = snippet_rows.iloc[0]["content"]
+        old_date = snippet_rows.iloc[0]["date_created"]
+        old_content = snippet_rows.iloc[0]["snippet_content"]
 
         with st.form("edit_form"):
             col1, col2 = st.columns(2)
