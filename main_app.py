@@ -1,5 +1,8 @@
 import streamlit as st
+
+# --- 設定頁面參數 ---
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
+
 import pandas as pd
 import datetime
 from google.oauth2 import service_account
@@ -11,6 +14,7 @@ def init_session_state():
         "snippet_content": "",
         "review_days": "1,3,7,14,30",
         "reset_snippet": False,
+        "prev_snippet_id": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -18,7 +22,12 @@ def init_session_state():
 
 init_session_state()
 
-# --- Google Sheets 驗證 ---
+# --- 計算今天字串 ---
+today = datetime.date.today()
+today_str = today.strftime("%Y%m%d")
+
+
+# --- 載入資料並計算 snippet_count ---
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["GOOGLE_SERVICE_ACCOUNT"]
 )
@@ -29,7 +38,6 @@ spreadsheet_id = sheet_url.split("/d/")[1].split("/")[0]
 service = build("sheets", "v4", credentials=credentials)
 sheet = service.spreadsheets()
 
-# --- 載入資料 ---
 result = sheet.values().get(spreadsheetId=spreadsheet_id, range=sheet_tab).execute()
 values = result.get("values", [])
 headers = values[0] if values else []
@@ -37,39 +45,18 @@ data = values[1:] if len(values) > 1 else []
 filtered_data = [row for row in data if len(row) == len(headers)]
 df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
 
-# --- 計算 Snippet ID ---
-today = datetime.date.today()
-today_str = today.strftime("%Y%m%d")
-
 # 初始化 snippet_count
 if "snippet_count" not in st.session_state:
     existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique() if "snippet_id" in df.columns else 0
     st.session_state["snippet_count"] = existing_count
 
-if "prev_snippet_id" not in st.session_state:
-    st.session_state["prev_snippet_id"] = ""
-
+# 產生 Snippet ID 並在變更時清空內容（這段一定要在 widget 之前）
 new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
-
-# 若 Snippet ID 變更，自動清空內容（必須在 widget 建立前進行）
 if st.session_state["prev_snippet_id"] != new_snippet_id:
     st.session_state["snippet_content"] = ""
     st.session_state["prev_snippet_id"] = new_snippet_id
 
-# --- UI ---
-st.title("🌀 記憶追蹤器")
-st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 
-# --- 新增 Snippet 表單 ---
-st.markdown("## ➕ 新增 Snippet")
-with st.form("add_snippet_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
-    with col2:
-        snippet_date = st.date_input("建立日期", value=today)
-
-    st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
     st.text_area("內容", key="snippet_content")
     st.text_input("回顧日（以逗號分隔）", key="review_days")
 
