@@ -9,8 +9,8 @@ from googleapiclient.discovery import build
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["GOOGLE_SERVICE_ACCOUNT"]
 )
-sheet_url = st.secrets["GOOGLE_SHEET_URL"]
-sheet_tab = st.secrets["GOOGLE_SHEET_TAB"]
+sheet_url = st.secrets["general"]["GOOGLE_SHEET_URL"]
+sheet_tab = st.secrets["general"]["GOOGLE_SHEET_TAB"]
 spreadsheet_id = sheet_url.split("/d/")[1].split("/")[0]
 
 service = build("sheets", "v4", credentials=credentials)
