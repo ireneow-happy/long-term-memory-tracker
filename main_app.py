@@ -38,10 +38,8 @@ new_snippet_id = f"{today_str}-{existing_count+1:02d}"
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
     col1, col2 = st.columns(2)
-
     with col1:
         snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
-
     with col2:
         snippet_date = st.date_input("建立日期", value=today)
 
