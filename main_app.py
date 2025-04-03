@@ -1,6 +1,5 @@
 import streamlit as st
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
-
 import pandas as pd
 import datetime
 from google.oauth2 import service_account
@@ -38,17 +37,17 @@ data = values[1:] if len(values) > 1 else []
 filtered_data = [row for row in data if len(row) == len(headers)]
 df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
 
-
 # --- 計算 Snippet ID ---
 today = datetime.date.today()
 today_str = today.strftime("%Y%m%d")
-if "prev_snippet_id" not in st.session_state:
-    st.session_state["prev_snippet_id"] = ""
 
 # 初始化 snippet_count
 if "snippet_count" not in st.session_state:
     existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique() if "snippet_id" in df.columns else 0
     st.session_state["snippet_count"] = existing_count
+
+if "prev_snippet_id" not in st.session_state:
+    st.session_state["prev_snippet_id"] = ""
 
 new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 
@@ -56,10 +55,8 @@ new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 if st.session_state["prev_snippet_id"] != new_snippet_id:
     st.session_state["snippet_content"] = ""
     st.session_state["prev_snippet_id"] = new_snippet_id
-"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 
-# --- UI 設定 ---
-st.set_page_config(page_title="記憶追蹤器", layout="centered")
+# --- UI ---
 st.title("🌀 記憶追蹤器")
 st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 
