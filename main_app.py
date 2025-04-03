@@ -32,6 +32,18 @@ st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 # --- 自動產生 Snippet ID ---
 today = datetime.date.today()
 today_str = today.strftime("%Y%m%d")
+
+# 初始化輸入欄位（如需要）
+if st.session_state.get("reset_snippet", False):
+    st.session_state["snippet_content"] = ""
+    st.session_state["review_days"] = "1,3,7,14,30"
+    st.session_state["reset_snippet"] = False
+
+if "snippet_content" not in st.session_state:
+    st.session_state["snippet_content"] = ""
+if "review_days" not in st.session_state:
+    st.session_state["review_days"] = "1,3,7,14,30"
+
 # 初始化輸入欄位
 if "snippet_content" not in st.session_state:
     st.session_state["snippet_content"] = ""
@@ -86,6 +98,8 @@ with st.form("add_snippet_form"):
             valueInputOption="USER_ENTERED",
             body={"values": rows_to_add}
         ).execute()
+
+        st.session_state["reset_snippet"] = True
 
         # reset content and count
         st.session_state["snippet_count"] += 1
@@ -142,6 +156,8 @@ if selected_id:
                     valueInputOption="USER_ENTERED",
                     body={"values": updated_rows}
                 ).execute()
+
+        st.session_state["reset_snippet"] = True
                 st.success("✅ Snippet 已更新。")
                 st.rerun()
 
