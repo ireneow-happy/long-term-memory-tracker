@@ -38,6 +38,8 @@ df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataF
 
 
 # --- 計算 Snippet ID ---
+today = datetime.date.today()
+today_str = today.strftime("%Y%m%d")
 if "prev_snippet_id" not in st.session_state:
     st.session_state["prev_snippet_id"] = ""
 
