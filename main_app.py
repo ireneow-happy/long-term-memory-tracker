@@ -43,6 +43,11 @@ today_str = today.strftime("%Y%m%d")
 if "prev_snippet_id" not in st.session_state:
     st.session_state["prev_snippet_id"] = ""
 
+# 初始化 snippet_count
+if "snippet_count" not in st.session_state:
+    existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique() if "snippet_id" in df.columns else 0
+    st.session_state["snippet_count"] = existing_count
+
 new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 
 # 若 Snippet ID 變更，自動清空內容（必須在 widget 建立前進行）
