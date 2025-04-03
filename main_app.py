@@ -20,7 +20,8 @@ result = sheet.values().get(spreadsheetId=spreadsheet_id, range=sheet_tab).execu
 values = result.get("values", [])
 headers = values[0] if values else []
 data = values[1:] if len(values) > 1 else []
-df = pd.DataFrame(data, columns=headers) if data else pd.DataFrame(columns=headers)
+filtered_data = [row for row in data if len(row) == len(headers)]
+df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
 
 # --- UI 設定 ---
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
