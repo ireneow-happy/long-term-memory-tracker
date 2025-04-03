@@ -147,4 +147,4 @@ if selected_del_id:
             ).execute()
 
         st.success("✅ Snippet 已刪除。")
-        st.experimental_rerun()
+        st.rerun()
