@@ -156,8 +156,6 @@ if selected_id:
                     valueInputOption="USER_ENTERED",
                     body={"values": updated_rows}
                 ).execute()
-
-        st.session_state["reset_snippet"] = True
                 st.success("✅ Snippet 已更新。")
                 st.rerun()
 
