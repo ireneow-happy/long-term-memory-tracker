@@ -82,7 +82,7 @@ selected_id = st.selectbox("選擇要修改的 Snippet ID", unique_ids)
 if selected_id:
     snippet_rows = df[df["snippet_id"] == selected_id]
     if not snippet_rows.empty:
-        old_type = snippet_rows.iloc[0]["type"]
+        old_type = snippet_rows.iloc[0]["snippet_type"]
         old_date = snippet_rows.iloc[0]["created_date"]
         old_content = snippet_rows.iloc[0]["content"]
 
