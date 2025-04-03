@@ -37,11 +37,18 @@ filtered_data = [row for row in data if len(row) == len(headers)]
 df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
 
 # --- 計算 Snippet ID ---
+if "prev_snippet_id" not in st.session_state:
+    st.session_state["prev_snippet_id"] = ""
 today = datetime.date.today()
 today_str = today.strftime("%Y%m%d")
 existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique() if "snippet_id" in df.columns else 0
 st.session_state["snippet_count"] = existing_count
 new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
+
+# 若 Snippet ID 變更，自動清空內容
+if st.session_state.get("prev_snippet_id", "") != new_snippet_id:
+    st.session_state["snippet_content"] = ""
+    st.session_state["prev_snippet_id"] = new_snippet_id
 
 # --- UI 設定 ---
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
