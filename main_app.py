@@ -33,6 +33,12 @@ st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 today = datetime.date.today()
 today_str = today.strftime("%Y%m%d")
 
+# 初始化輸入欄位
+if "snippet_content" not in st.session_state:
+    st.session_state["snippet_content"] = ""
+if "review_days" not in st.session_state:
+    st.session_state["review_days"] = "1,3,7,14,30"
+
 if "snippet_count" not in st.session_state:
     existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique()
     st.session_state["snippet_count"] = existing_count
