@@ -1,9 +1,21 @@
-
 import streamlit as st
 import pandas as pd
 import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+
+# --- 初始化 session_state ---
+def init_session_state():
+    defaults = {
+        "snippet_content": "",
+        "review_days": "1,3,7,14,30",
+        "reset_snippet": False,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+init_session_state()
 
 # --- Google Sheets 驗證 ---
 credentials = service_account.Credentials.from_service_account_info(
@@ -24,59 +36,17 @@ data = values[1:] if len(values) > 1 else []
 filtered_data = [row for row in data if len(row) == len(headers)]
 df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
 
+# --- 計算 Snippet ID ---
+today = datetime.date.today()
+today_str = today.strftime("%Y%m%d")
+existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique() if "snippet_id" in df.columns else 0
+st.session_state["snippet_count"] = existing_count
+new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
+
 # --- UI 設定 ---
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
 st.title("🌀 記憶追蹤器")
 st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
-
-# --- 自動產生 Snippet ID ---
-today = datetime.date.today()
-today_str = today.strftime("%Y%m%d")
-
-# 🧼 初始化輸入欄位與 Reset 控制 flag，必須放在最前面避免 Streamlit 拒絕設定
-if "reset_snippet" not in st.session_state:
-    st.session_state["reset_snippet"] = False
-
-if st.session_state["reset_snippet"]:
-    st.session_state["snippet_content"] = ""
-    st.session_state["review_days"] = "1,3,7,14,30"
-    st.session_state["reset_snippet"] = False
-
-if "snippet_content" not in st.session_state:
-    st.session_state["snippet_content"] = ""
-if "review_days" not in st.session_state:
-    st.session_state["review_days"] = "1,3,7,14,30"
-
-
-# 初始化輸入欄位（如需要）
-if st.session_state.get("reset_snippet", False):
-    st.session_state["snippet_content"] = ""
-    st.session_state["review_days"] = "1,3,7,14,30"
-    st.session_state["reset_snippet"] = False
-
-if "snippet_content" not in st.session_state:
-    st.session_state["snippet_content"] = ""
-if "review_days" not in st.session_state:
-    st.session_state["review_days"] = "1,3,7,14,30"
-
-# 初始化輸入欄位
-if "snippet_content" not in st.session_state:
-    st.session_state["snippet_content"] = ""
-if "review_days" not in st.session_state:
-    st.session_state["review_days"] = "1,3,7,14,30"
-
-# 初始化輸入欄位
-if "snippet_count" not in st.session_state:
-    existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique()
-    st.session_state["snippet_count"] = existing_count
-
-if "snippet_content" not in st.session_state:
-    st.session_state["snippet_content"] = ""
-
-if "review_days" not in st.session_state:
-    st.session_state["review_days"] = "1,3,7,14,30"
-
-new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
@@ -114,15 +84,12 @@ with st.form("add_snippet_form"):
             body={"values": rows_to_add}
         ).execute()
 
-        st.session_state["reset_snippet"] = True
-
-        # reset content and count
         st.session_state["snippet_count"] += 1
         st.session_state["snippet_content"] = ""
         st.session_state["review_days"] = "1,3,7,14,30"
 
-        st.success("✅ Snippet 已新增！請重新整理查看最新內容。")
-        st.rerun()
+        st.success("✅ Snippet 已新增！")
+        st.experimental_rerun()
 
 # --- 修改 Snippet ---
 st.markdown("---")
@@ -136,12 +103,11 @@ if selected_id:
         old_type = snippet_rows.iloc[0]["snippet_type"]
         old_date = snippet_rows.iloc[0]["date_created"]
         old_content = snippet_rows.iloc[0]["snippet_content"]
-        ordered_options = ["note", "vocab", "quote", "other"]
 
         with st.form("edit_form"):
             col1, col2 = st.columns(2)
             with col1:
-                new_type = st.selectbox("類型", ordered_options, index=ordered_options.index(old_type))
+                new_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=["note", "vocab", "quote", "other"].index(old_type))
             with col2:
                 new_date = st.date_input("建立日期", value=datetime.datetime.strptime(old_date, "%Y-%m-%d").date())
             new_content = st.text_area("內容", value=old_content)
@@ -158,8 +124,7 @@ if selected_id:
                     snippet_rows.iloc[i]["completed"]
                 ] for i, offset in enumerate(review_offsets)]
 
-                indices_to_delete = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id]
-                for index in sorted(indices_to_delete, reverse=True):
+                for index in sorted([i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id], reverse=True):
                     sheet.values().clear(
                         spreadsheetId=spreadsheet_id,
                         range=f"{sheet_tab}!A{index+1}:F{index+1}"
@@ -172,7 +137,7 @@ if selected_id:
                     body={"values": updated_rows}
                 ).execute()
                 st.success("✅ Snippet 已更新。")
-                st.rerun()
+                st.experimental_rerun()
 
 # --- 刪除 Snippet ---
 st.markdown("---")
@@ -182,23 +147,11 @@ selected_del_id = st.selectbox("選擇要刪除的 Snippet ID", unique_ids, key=
 if selected_del_id:
     confirm = st.button("確認刪除")
     if confirm:
-        indices_to_delete = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id]
-        delete_requests = [{
-            "deleteDimension": {
-                "range": {
-                    "sheetId": 0,
-                    "dimension": "ROWS",
-                    "startIndex": index,
-                    "endIndex": index + 1
-                }
-            }
-        } for index in sorted(indices_to_delete, reverse=True)]
-
-        if delete_requests:
-            sheet.batchUpdate(
+        for index in sorted([i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id], reverse=True):
+            sheet.values().clear(
                 spreadsheetId=spreadsheet_id,
-                body={"requests": delete_requests}
+                range=f"{sheet_tab}!A{index+1}:F{index+1}"
             ).execute()
 
         st.success("✅ Snippet 已刪除。")
-        st.rerun()
+        st.experimental_rerun()
