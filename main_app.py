@@ -95,7 +95,7 @@ with st.form("add_snippet_form"):
         st.session_state["review_days"] = "1,3,7,14,30"
 
         st.success("✅ Snippet 已新增！")
-        st.experimental_rerun()
+        st.rerun()
 
 # --- 修改 Snippet ---
 st.markdown("---")
@@ -143,7 +143,7 @@ if selected_id:
                     body={"values": updated_rows}
                 ).execute()
                 st.success("✅ Snippet 已更新。")
-                st.experimental_rerun()
+                st.rerun()
 
 # --- 刪除 Snippet ---
 st.markdown("---")
@@ -160,4 +160,4 @@ if selected_del_id:
             ).execute()
 
         st.success("✅ Snippet 已刪除。")
-        st.experimental_rerun()
+        st.rerun()
