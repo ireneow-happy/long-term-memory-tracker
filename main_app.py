@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import datetime
@@ -31,8 +32,12 @@ st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 # --- 自動產生 Snippet ID ---
 today = datetime.date.today()
 today_str = today.strftime("%Y%m%d")
-existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)].shape[0]
-new_snippet_id = f"{today_str}-{existing_count+1:02d}"
+
+if "snippet_count" not in st.session_state:
+    existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)].shape[0]
+    st.session_state["snippet_count"] = existing_count
+
+new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
@@ -69,7 +74,10 @@ with st.form("add_snippet_form"):
             valueInputOption="USER_ENTERED",
             body={"values": rows_to_add}
         ).execute()
+
+        st.session_state["snippet_count"] += 1
         st.success("✅ Snippet 已新增！請重新整理查看最新內容。")
+        st.rerun()
 
 # --- 修改 Snippet ---
 st.markdown("---")
