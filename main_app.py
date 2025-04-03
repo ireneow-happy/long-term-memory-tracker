@@ -34,7 +34,7 @@ today = datetime.date.today()
 today_str = today.strftime("%Y%m%d")
 
 if "snippet_count" not in st.session_state:
-    existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)].shape[0]
+    existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)]["snippet_id"].nunique()
     st.session_state["snippet_count"] = existing_count
 
 if "snippet_content" not in st.session_state:
