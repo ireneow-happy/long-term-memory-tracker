@@ -52,6 +52,66 @@ if st.session_state["prev_snippet_id"] != new_snippet_id:
 
 # --- UI ---
 st.title("🌀 記憶追蹤器")
+
+# --- 雙月曆顯示 ---
+st.markdown("## 📅 本月與下月複習排程")
+
+# 計算本月與下月的日期範圍
+first_day = today.replace(day=1)
+last_day_next_month = (first_day.replace(day=28) + timedelta(days=4)).replace(day=1) + timedelta(days=-1)
+end_date = last_day_next_month
+
+# 建立週結構（每週一列）
+days_range = pd.date_range(start=first_day, end=end_date)
+weeks = []
+week = [None]*7
+for d in days_range:
+    weekday = d.weekday()  # 週一為 0
+    if weekday == 0 and any(week):
+        weeks.append(week)
+        week = [None]*7
+    week[weekday] = d
+if any(week):
+    weeks.append(week)
+
+# 依 review_date 整理每天的 snippet 資訊
+df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
+review_map = {}
+for _, row in df.iterrows():
+    day = row["review_date"].date()
+    if day not in review_map:
+        review_map[day] = []
+    review_map[day].append(f"{row['snippet_id']}")
+
+# 畫出週曆表格
+st.markdown("### 週視圖（複習排程）")
+calendar_table = """<style>
+.calendar {border-collapse: collapse; width: 100%;}
+.calendar td, .calendar th {border: 1px solid #ccc; padding: 6px; vertical-align: top; font-size: 0.85em;}
+.calendar th {background: #f0f0f0; text-align: center;}
+.calendar td {height: 80px;}
+.calendar .date {font-weight: bold;}
+</style>
+<table class='calendar'>
+<tr>
+<th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th>
+</tr>
+"""
+
+for week in weeks:
+    calendar_table += "<tr>"
+    for day in week:
+        if day:
+            display_date = f"{day.month}/{day.day}"
+            review_items = "<br>".join(review_map.get(day.date(), []))
+            cell = f"<div class='date'>{display_date}</div><div>{review_items}</div>"
+        else:
+            cell = ""
+        calendar_table += f"<td>{cell}</td>"
+    calendar_table += "</tr>"
+
+calendar_table += "</table>"
+st.markdown(calendar_table, unsafe_allow_html=True)
 st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 
 # --- 新增 Snippet 表單 ---
