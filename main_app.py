@@ -37,6 +37,12 @@ if "snippet_count" not in st.session_state:
     existing_count = df[df["snippet_id"].str.startswith(today_str, na=False)].shape[0]
     st.session_state["snippet_count"] = existing_count
 
+if "snippet_content" not in st.session_state:
+    st.session_state["snippet_content"] = ""
+
+if "review_days" not in st.session_state:
+    st.session_state["review_days"] = "1,3,7,14,30"
+
 new_snippet_id = f"{today_str}-{st.session_state['snippet_count'] + 1:02d}"
 
 # --- 新增 Snippet 表單 ---
@@ -49,8 +55,8 @@ with st.form("add_snippet_form"):
         snippet_date = st.date_input("建立日期", value=today)
 
     st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
-    snippet_content = st.text_area("內容")
-    review_days = st.text_input("回顧日（以逗號分隔）", "1,3,7,14,30")
+    snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
+    review_days = st.text_input("回顧日（以逗號分隔）", value=st.session_state["review_days"])
 
     submitted = st.form_submit_button("新增")
     if submitted:
@@ -75,7 +81,11 @@ with st.form("add_snippet_form"):
             body={"values": rows_to_add}
         ).execute()
 
+        # reset content and count
         st.session_state["snippet_count"] += 1
+        st.session_state["snippet_content"] = ""
+        st.session_state["review_days"] = "1,3,7,14,30"
+
         st.success("✅ Snippet 已新增！請重新整理查看最新內容。")
         st.rerun()
 
