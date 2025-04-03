@@ -4,6 +4,8 @@ import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
+st.set_page_config(page_title="記憶追蹤器", layout="centered")
+
 # --- 初始化 session_state ---
 def init_session_state():
     defaults = {
