@@ -37,6 +37,8 @@ headers = values[0] if values else []
 data = values[1:] if len(values) > 1 else []
 filtered_data = [row for row in data if len(row) == len(headers)]
 df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
+df = df.dropna(how="all")  # 完全為空的列
+df = df.loc[~(df == "").all(axis=1)]  # 所有欄位皆為空字串的列
 
 # --- 準備 Snippet ID ---
 today = datetime.date.today()
