@@ -133,13 +133,13 @@ def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
 
     # --- 程式開始 ---
 
-import streamlit as st
-from datetime import date, timedelta
-st.set_page_config(page_title="記憶追蹤器", layout="centered")
-import pandas as pd
-import datetime
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
+    import streamlit as st
+    from datetime import date, timedelta
+    st.set_page_config(page_title="記憶追蹤器", layout="centered")
+    import pandas as pd
+    import datetime
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
 
 # --- 初始化 session_state ---
 def init_session_state():
