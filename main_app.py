@@ -62,12 +62,12 @@ first_day = today.replace(day=1)
 last_day_next_month = (first_day.replace(day=28) + timedelta(days=4)).replace(day=1) + timedelta(days=31)
 end_date = last_day_next_month
 
-# 建立週結構（每週一列）
+# 建立週結構
 days_range = pd.date_range(start=first_day, end=end_date)
 weeks = []
 week = [None]*7
 for d in days_range:
-    weekday = d.weekday()  # 週一為 0
+    weekday = d.weekday()
     if weekday == 0 and any(week):
         weeks.append(week)
         week = [None]*7
@@ -75,49 +75,49 @@ for d in days_range:
 if any(week):
     weeks.append(week)
 
-# 依 review_date 整理每天的 snippet_id
+# 整理複習資料並加上 checkbox 控制邏輯
 df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
+df["completed"] = df["completed"].fillna("FALSE")
 review_map = {}
-for _, row in df.iterrows():
+for i, row in df.iterrows():
     if pd.isna(row["review_date"]):
         continue
-    review_day = row["review_date"].date()
-    if review_day not in review_map:
-        review_map[review_day] = []
-    review_map[review_day].append(row["snippet_id"])
+    day = row["review_date"].date()
+    if day not in review_map:
+        review_map[day] = []
+    review_map[day].append({
+        "snippet_id": row["snippet_id"],
+        "row_index": i + 1,
+        "checked": row["completed"] == "TRUE"
+    })
 
 # 畫出週曆表格
 st.markdown("### 週視圖（複習排程）")
-calendar_table = """<style>
-.calendar {border-collapse: collapse; width: 100%;}
-.calendar td, .calendar th {border: 1px solid #ccc; padding: 6px; vertical-align: top; font-size: 0.85em;}
-.calendar th {background: #f0f0f0; text-align: center;}
-.calendar td {height: 80px;}
-.calendar .date {font-weight: bold;}
-</style>
-<table class='calendar'>
-<tr>
-<th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th>
-</tr>
-"""
-
+from uuid import uuid4
+calendar_table = "<div style='display: flex; flex-direction: column;'>"
 for week in weeks:
-    calendar_table += "<tr>"
+    calendar_table += "<div style='display: flex;'>"
     for day in week:
         if day:
-            display_date = f"{day.month}/{day.day}"
-            snippets = review_map.get(day.date(), [])
-            review_items = "<br>".join(snippets)
-            cell = f"<div class='date'>{display_date}</div><div>{review_items}</div>"
+            day_str = f"{day.month}/{day.day}"
+            entries = review_map.get(day.date(), [])
+            cell_html = f"<div><b>{day_str}</b></div>"
+            for entry in entries:
+                key = f"{entry['snippet_id']}_{entry['row_index']}"
+                checked = st.checkbox(entry["snippet_id"], value=entry["checked"], key=key)
+                if checked != entry["checked"]:
+                    sheet.values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"{sheet_tab}!F{entry['row_index']+1}",
+                        valueInputOption="USER_ENTERED",
+                        body={"values": [["TRUE" if checked else "FALSE"]]}
+                    ).execute()
         else:
-            cell = ""
-        calendar_table += f"<td>{cell}</td>"
-    calendar_table += "</tr>"
-
-calendar_table += "</table>"
+            cell_html = ""
+        calendar_table += f"<div style='flex: 1; border: 1px solid #ccc; padding: 6px;'>{cell_html}</div>"
+    calendar_table += "</div>"
+calendar_table += "</div>"
 st.markdown(calendar_table, unsafe_allow_html=True)
-st.markdown(calendar_table, unsafe_allow_html=True)
-st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
