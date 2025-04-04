@@ -95,25 +95,21 @@ for i, row in df.iterrows():
 
 # --- 週視圖（月曆格式：checkbox 放入格子 + snippet ID 有格線 + 日期列縮小）---
 
-# --- 週視圖（表格格式，支援互動 checkbox）---
+# --- 表格週視圖（最終樣式 + 可互動 checkbox）---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# 計算最近 4 週（週一開始）
 start_of_week = today - timedelta(days=today.weekday())
 end_date = start_of_week + timedelta(days=27)
-days_range = pd.date_range(start=start_of_week, end=end_date)
+date_range = pd.date_range(start=start_of_week, end=end_date)
 
-# 補齊空格至整週
-first_day_index = days_range[0].weekday()
-padded_days = [None] * first_day_index + list(days_range)
+first_day_idx = date_range[0].weekday()
+padded_days = [None] * first_day_idx + list(date_range)
 while len(padded_days) % 7 != 0:
     padded_days.append(None)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-# 星期列
 day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-# 樣式
 st.markdown("""
 <style>
 .calendar {
@@ -134,22 +130,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 開始渲染表格
-calendar_html = "<table class='calendar'>"
-calendar_html += "<tr>" + "".join(f"<th>{d}</th>" for d in day_names) + "</tr>"
-
+calendar_html = "<table class='calendar'><thead><tr>" + "".join(f"<th>{day}</th>" for day in day_names) + "</tr></thead><tbody>"
 for week in weeks:
     calendar_html += "<tr>"
     for day in week:
         if day:
             date_str = f"{day.month}/{day.day}"
-            cell_id = f"{day.strftime('%Y%m%d')}"
-            cell_html = f"<strong>{date_str}</strong><br>"
             snippets = review_map.get(day.date(), [])
+            calendar_html += "<td>"
+            calendar_html += f"<strong>{date_str}</strong><br>"
             for item in snippets:
                 key = item["key"]
                 label = item["short_id"]
-                checked = st.checkbox(label, value=item["checked"], key=key, help=item["snippet_id"])
+                full_id = item["snippet_id"]
+                checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
                 if checked != item["checked"]:
                     sheet.values().update(
                         spreadsheetId=spreadsheet_id,
@@ -157,11 +151,11 @@ for week in weeks:
                         valueInputOption="USER_ENTERED",
                         body={"values": [["TRUE" if checked else "FALSE"]]}
                     ).execute()
-            st.markdown(f"<td>{cell_html}</td>", unsafe_allow_html=True)
+            calendar_html += "</td>"
         else:
-            st.markdown("<td></td>", unsafe_allow_html=True)
+            calendar_html += "<td></td>"
     calendar_html += "</tr>"
-calendar_html += "</table>"
+calendar_html += "</tbody></table>"
 
 st.markdown(calendar_html, unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
