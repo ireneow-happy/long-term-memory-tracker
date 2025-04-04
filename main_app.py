@@ -75,20 +75,16 @@ for d in days_range:
 if any(week):
     weeks.append(week)
 
-# 檢查 review_date 有效性
+# 依 review_date 整理每天的 snippet_id
 df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
 review_map = {}
 for _, row in df.iterrows():
     if pd.isna(row["review_date"]):
         continue
-    day = row["review_date"].date()
-    snippet_id = row.get("snippet_id", "")
-    snippet_content = row.get("snippet_content", "")
-    snippet_preview = snippet_content[:15] + ("..." if len(snippet_content) > 15 else "")
-    entry = f"<b>{snippet_id}</b><br><span>{snippet_preview}</span>"
-    if day not in review_map:
-        review_map[day] = []
-    review_map[day].append(entry)
+    review_day = row["review_date"].date()
+    if review_day not in review_map:
+        review_map[review_day] = []
+    review_map[review_day].append(row["snippet_id"])
 
 # 畫出週曆表格
 st.markdown("### 週視圖（複習排程）")
@@ -96,8 +92,8 @@ calendar_table = """<style>
 .calendar {border-collapse: collapse; width: 100%;}
 .calendar td, .calendar th {border: 1px solid #ccc; padding: 6px; vertical-align: top; font-size: 0.85em;}
 .calendar th {background: #f0f0f0; text-align: center;}
-.calendar td {height: 100px;}
-.calendar .date {font-weight: bold; margin-bottom: 4px;}
+.calendar td {height: 80px;}
+.calendar .date {font-weight: bold;}
 </style>
 <table class='calendar'>
 <tr>
@@ -110,7 +106,8 @@ for week in weeks:
     for day in week:
         if day:
             display_date = f"{day.month}/{day.day}"
-            review_items = "<br><hr style='margin:2px'/>".join(review_map.get(day.date(), []))
+            snippets = review_map.get(day.date(), [])
+            review_items = "<br>".join(snippets)
             cell = f"<div class='date'>{display_date}</div><div>{review_items}</div>"
         else:
             cell = ""
@@ -119,6 +116,8 @@ for week in weeks:
 
 calendar_table += "</table>"
 st.markdown(calendar_table, unsafe_allow_html=True)
+st.markdown(calendar_table, unsafe_allow_html=True)
+st.write("這是一個幫助你建立長期記憶回顧計劃的工具。")
 
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
