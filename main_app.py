@@ -1,3 +1,4 @@
+
 import streamlit as st
 from datetime import date, timedelta
 st.set_page_config(page_title="記憶追蹤器", layout="centered")
@@ -92,174 +93,48 @@ for i, row in df.iterrows():
         "key": f"chk_{row['snippet_id']}_{i}"
     })
 
-
-# --- 週視圖（月曆格式：checkbox 放入格子 + snippet ID 有格線 + 日期列縮小）---
-
-# --- 表格週視圖（最終樣式 + 可互動 checkbox）---
-st.markdown("### 🗓️ 最近 4 週回顧任務")
-
-start_of_week = today - timedelta(days=today.weekday())
-end_date = start_of_week + timedelta(days=27)
-date_range = pd.date_range(start=start_of_week, end=end_date)
-
-first_day_idx = date_range[0].weekday()
-padded_days = [None] * first_day_idx + list(date_range)
-while len(padded_days) % 7 != 0:
-    padded_days.append(None)
-weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
-
-day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
+# --- 自訂樣式 ---
 st.markdown("""
 <style>
-.calendar {
-    border-collapse: collapse;
-    width: 100%;
-    table-layout: fixed;
-}
-.calendar th, .calendar td {
-    border: 1px solid #ccc;
-    vertical-align: top;
-    padding: 6px;
-    font-size: 12px;
-}
-.calendar th {
-    background-color: #f0f0f0;
-    text-align: center;
-}
+    .week-header { font-weight: bold; text-align: center; font-size: 14px; padding: 6px; }
+    .day-box { border: 1px solid #ddd; min-height: 120px; padding: 4px; font-size: 12px; border-radius: 4px; }
+    .day-title { font-weight: bold; text-align: center; margin-bottom: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
-calendar_html = "<table class='calendar'><thead><tr>" + "".join(f"<th>{day}</th>" for day in day_names) + "</tr></thead><tbody>"
+# --- 新週視圖（最近 4 週） ---
+st.markdown("### 🗓️ 最近 4 週回顧任務")
+
+start_date = today - timedelta(days=today.weekday())  # 本週一
+end_date = start_date + timedelta(days=27)
+date_list = pd.date_range(start=start_date, end=end_date)
+
+padded = [None] * date_list[0].weekday() + list(date_list)
+weeks = [padded[i:i+7] for i in range(0, len(padded), 7)]
+
+# 星期列
+cols = st.columns(7)
+for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+    cols[i].markdown(f"<div class='week-header'>{day}</div>", unsafe_allow_html=True)
+
+# 每週列
 for week in weeks:
-    calendar_html += "<tr>"
-    for day in week:
-        if day:
-            date_str = f"{day.month}/{day.day}"
-            snippets = review_map.get(day.date(), [])
-            calendar_html += "<td>"
-            calendar_html += f"<strong>{date_str}</strong><br>"
-            for item in snippets:
-                key = item["key"]
-                label = item["short_id"]
-                full_id = item["snippet_id"]
-                checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
-                if checked != item["checked"]:
+    cols = st.columns(7)
+    for i, d in enumerate(week):
+        with cols[i]:
+            if d is None:
+                st.markdown("<div class='day-box'>&nbsp;</div>", unsafe_allow_html=True)
+                continue
+
+            st.markdown(f"<div class='day-box'><div class='day-title'>{d.month}/{d.day}</div>", unsafe_allow_html=True)
+            tasks = review_map.get(d.date(), [])
+            for task in tasks:
+                current = st.checkbox(task["short_id"], value=task["checked"], key=task["key"], help=task["snippet_id"])
+                if current != task["checked"]:
                     sheet.values().update(
                         spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!F{item['row_index']+1}",
+                        range=f"{sheet_tab}!F{task['row_index']+1}",
                         valueInputOption="USER_ENTERED",
-                        body={"values": [["TRUE" if checked else "FALSE"]]}
+                        body={"values": [["TRUE" if current else "FALSE"]]}
                     ).execute()
-            calendar_html += "</td>"
-        else:
-            calendar_html += "<td></td>"
-    calendar_html += "</tr>"
-calendar_html += "</tbody></table>"
-
-st.markdown(calendar_html, unsafe_allow_html=True)
-# --- 新增 Snippet 表單 ---
-st.markdown("## ➕ 新增 Snippet")
-with st.form("add_snippet_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
-    with col2:
-        snippet_date = st.date_input("建立日期", value=today)
-
-    st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
-    snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
-    review_days = st.text_input("回顧日（以逗號分隔）", value=st.session_state["review_days"])
-
-    submitted = st.form_submit_button("新增")
-    if submitted:
-        rows_to_add = []
-        for day in review_days.split(","):
-            day = day.strip()
-            if day.isdigit():
-                review_date = snippet_date + datetime.timedelta(days=int(day))
-                rows_to_add.append([
-                    snippet_date.strftime("%Y-%m-%d"),
-                    snippet_type,
-                    new_snippet_id,
-                    snippet_content,
-                    review_date.strftime("%Y-%m-%d"),
-                    "FALSE"
-                ])
-
-        sheet.values().append(
-            spreadsheetId=spreadsheet_id,
-            range=sheet_tab,
-            valueInputOption="USER_ENTERED",
-            body={"values": rows_to_add}
-        ).execute()
-
-        st.session_state["snippet_count"] += 1
-        st.session_state["snippet_content"] = ""
-        st.session_state["review_days"] = "1,3,7,14,30"
-
-        st.success("✅ Snippet 已新增！")
-        st.rerun()
-
-# --- 修改 Snippet ---
-st.markdown("---")
-st.markdown("## 📝 修改 Snippet")
-unique_ids = df["snippet_id"].unique()
-selected_id = st.selectbox("選擇要修改的 Snippet ID", unique_ids)
-
-if selected_id:
-    snippet_rows = df[df["snippet_id"] == selected_id]
-    if not snippet_rows.empty:
-        old_type = snippet_rows.iloc[0]["snippet_type"]
-        old_date = snippet_rows.iloc[0]["date_created"]
-        old_content = snippet_rows.iloc[0]["snippet_content"]
-
-        with st.form("edit_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                new_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=["note", "vocab", "quote", "other"].index(old_type))
-            with col2:
-                new_date = st.date_input("建立日期", value=datetime.datetime.strptime(old_date, "%Y-%m-%d").date())
-            new_content = st.text_area("內容", value=old_content)
-
-            update_btn = st.form_submit_button("更新 Snippet")
-            if update_btn:
-                review_offsets = (pd.to_datetime(snippet_rows["review_date"]) - pd.to_datetime(old_date)).dt.days
-                updated_rows = [[
-                    new_date.strftime("%Y-%m-%d"),
-                    new_type,
-                    selected_id,
-                    new_content,
-                    (new_date + datetime.timedelta(days=int(offset))).strftime("%Y-%m-%d"),
-                    snippet_rows.iloc[i]["completed"]
-                ] for i, offset in enumerate(review_offsets)]
-
-                # 找出原始資料的 row index 並逐列覆蓋更新
-                matching_indices = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id]
-                for row_index, row_data in zip(matching_indices, updated_rows):
-                    sheet.values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!A{row_index+1}:F{row_index+1}",
-                        valueInputOption="USER_ENTERED",
-                        body={"values": [row_data]}
-                    ).execute()
-
-                st.success("✅ Snippet 已更新。")
-                st.rerun()
-
-# --- 刪除 Snippet ---
-st.markdown("---")
-st.markdown("## 🗑️ 刪除 Snippet")
-selected_del_id = st.selectbox("選擇要刪除的 Snippet ID", unique_ids, key="delete")
-
-if selected_del_id:
-    confirm = st.button("確認刪除")
-    if confirm:
-        for index in sorted([i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id], reverse=True):
-            sheet.values().clear(
-                spreadsheetId=spreadsheet_id,
-                range=f"{sheet_tab}!A{index+1}:F{index+1}"
-            ).execute()
-
-        st.success("✅ Snippet 已刪除。")
-        st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
