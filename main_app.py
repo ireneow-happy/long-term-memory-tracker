@@ -1,9 +1,9 @@
 def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
-    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today)
+    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today, key='weekly_calendar_start_date')
 
     # --- 週視圖（月曆格式） ---
 
-    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today)
+    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today, key='weekly_calendar_start_date')
     start_date = user_start_date - timedelta(days=user_start_date.weekday())
     end_date = start_date + timedelta(days=27)
     date_range = pd.date_range(start=start_date, end=end_date)
