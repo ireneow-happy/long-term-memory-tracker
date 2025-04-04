@@ -37,8 +37,6 @@ headers = values[0] if values else []
 data = values[1:] if len(values) > 1 else []
 filtered_data = [row for row in data if len(row) == len(headers)]
 df = pd.DataFrame(filtered_data, columns=headers) if filtered_data else pd.DataFrame(columns=headers)
-df = df.dropna(how="all")  # 完全為空的列
-df = df.loc[~(df == "").all(axis=1)]  # 所有欄位皆為空字串的列
 
 # --- 準備 Snippet ID ---
 today = datetime.date.today()
@@ -193,18 +191,16 @@ if selected_id:
                     snippet_rows.iloc[i]["completed"]
                 ] for i, offset in enumerate(review_offsets)]
 
-                for index in sorted([i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id], reverse=True):
-                    sheet.values().clear(
+                # 找出原始資料的 row index 並逐列覆蓋更新
+                matching_indices = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id]
+                for row_index, row_data in zip(matching_indices, updated_rows):
+                    sheet.values().update(
                         spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!A{index+1}:F{index+1}"
+                        range=f"{sheet_tab}!A{row_index+1}:F{row_index+1}",
+                        valueInputOption="USER_ENTERED",
+                        body={"values": [row_data]}
                     ).execute()
 
-                sheet.values().append(
-                    spreadsheetId=spreadsheet_id,
-                    range=sheet_tab,
-                    valueInputOption="USER_ENTERED",
-                    body={"values": updated_rows}
-                ).execute()
                 st.success("✅ Snippet 已更新。")
                 st.rerun()
 
