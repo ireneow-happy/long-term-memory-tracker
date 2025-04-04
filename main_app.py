@@ -290,7 +290,7 @@ if selected_id:
             with col1:
                 new_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=["note", "vocab", "quote", "other"].index(old_type))
             with col2:
-            new_content = st.text_area("內容", value=old_content)
+                new_content = st.text_area("內容", value=old_content)
 
             update_btn = st.form_submit_button("更新 Snippet")
             if update_btn:
@@ -305,13 +305,19 @@ if selected_id:
                 ] for i, offset in enumerate(review_offsets)]
 
                 matching_indices = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id]
-                for row_index, row_data in zip(matching_indices, updated_rows):
-                            sheet.values().update(
-                            api_update_count += 1
+for row_index, row_data in zip(matching_indices, updated_rows):
+    sheet.values().update(
+        spreadsheetId=spreadsheet_id,
+        range=f"{sheet_tab}!A{row_index}:F{row_index}",
+        valueInputOption="USER_ENTERED",
+        body={"values": [row_data]}
+    ).execute()
+    api_update_count += 1
+    st.success("✅ Snippet 已更新。")
+    st.rerun()
 
-                st.success("✅ Snippet 已更新。")
-                st.rerun()
 
+    # --- 刪除 Snippet ---
     # --- 刪除 Snippet ---
 st.markdown("---")
 st.markdown("## 🗑️ 刪除 Snippet")
@@ -322,6 +328,9 @@ if selected_del_id:
     if confirm:
         for index in sorted([i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id], reverse=True):
             sheet.values().clear(
+                spreadsheetId=spreadsheet_id,
+                range=f"{sheet_tab}!A{index}:F{index}"
+            ).execute()
 
         st.success("✅ Snippet 已刪除。")
         st.rerun()
