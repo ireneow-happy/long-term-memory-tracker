@@ -56,6 +56,27 @@ if st.session_state["prev_snippet_id"] != new_snippet_id:
 st.title("🌀 記憶追蹤器")
 
 
+
+# --- 建立 review_map ---
+df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
+df["completed"] = df["completed"].fillna("FALSE")
+
+review_map = {}
+for i, row in df.iterrows():
+    if pd.isna(row["review_date"]):
+        continue
+    review_day = row["review_date"].date()
+    if review_day not in review_map:
+        review_map[review_day] = []
+    short_id = row["snippet_id"][-7:] if len(row["snippet_id"]) > 7 else row["snippet_id"]
+    review_map[review_day].append({
+        "snippet_id": row["snippet_id"],
+        "short_id": short_id,
+        "row_index": i + 1,
+        "checked": row["completed"] == "TRUE",
+        "key": f"chk_{row['snippet_id']}_{i}"
+    })
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
