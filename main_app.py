@@ -92,7 +92,6 @@ for i, row in df.iterrows():
         "key": f"{row['snippet_id']}_{i}"
     })
 
-# 顯示表格
 st.markdown("### 週視圖（複習排程）")
 calendar_html = """<style>
 .calendar {border-collapse: collapse; width: 100%;}
