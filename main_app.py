@@ -94,7 +94,7 @@ for i, row in df.iterrows():
 
 
 # --- 週視圖（月曆格式，含 snippet ID + checkbox 可更新）---
-st.markdown("### 🗓️ 過去 4 週回顧任務")
+st.markdown("### 🗓️ 最近 4 週回顧任務")
 
 # 加上樣式
 st.markdown("""
@@ -111,6 +111,7 @@ st.markdown("""
     padding: 4px;
     font-size: 12px;
     transition: background-color 0.3s;
+    overflow-wrap: break-word;
 }
 .day-cell:hover {
     background-color: #f0f0f0;
@@ -121,7 +122,6 @@ st.markdown("""
     margin-bottom: 4px;
 }
 .snippet-checkbox {
-    display: block;
     font-size: 11px;
     white-space: nowrap;
     margin: 2px 0;
@@ -140,32 +140,33 @@ start_of_week = today - timedelta(days=today.weekday())
 end_date = start_of_week + timedelta(days=27)
 days_range = pd.date_range(start=start_of_week, end=end_date)
 
-# 填滿為整數週（補空格）
+# 填補空格讓開頭為週一
 first_day_idx = days_range[0].weekday()
 grid_days = [None] * first_day_idx + list(days_range)
 
-# 顯示每一天
+# 建立月曆格內容
 calendar_html = '<div class="calendar">'
 for d in grid_days:
-    cell_content = ""
     if d:
         day_str = f"{d.month}/{d.day}"
-        cell_content += f"<strong>{day_str}</strong><br>"
         snippets = review_map.get(d.date(), [])
-        for item in snippets:
-            key = item["key"]
-            label = f"{item['short_id']}"
-            full_id = item["snippet_id"]
-            # 使用 markdown 替代 HTML 讓 checkbox 正常出現
-            checked = st.checkbox(f"{label}", value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
-            if checked != item["checked"]:
-                sheet.values().update(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"{sheet_tab}!F{item['row_index']+1}",
-                    valueInputOption="USER_ENTERED",
-                    body={"values": [["TRUE" if checked else "FALSE"]]}
-                ).execute()
-    calendar_html += f'<div class="day-cell">{cell_content}</div>' if d else '<div class="day-cell">&nbsp;</div>'
+        with st.container():
+            st.markdown(f'<div class="day-cell"><strong>{day_str}</strong>', unsafe_allow_html=True)
+            for item in snippets:
+                key = item["key"]
+                label = f"{item['short_id']}"
+                full_id = item["snippet_id"]
+                checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
+                if checked != item["checked"]:
+                    sheet.values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"{sheet_tab}!F{item['row_index']+1}",
+                        valueInputOption="USER_ENTERED",
+                        body={"values": [["TRUE" if checked else "FALSE"]]}
+                    ).execute()
+            st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        calendar_html += '<div class="day-cell">&nbsp;</div>'
 calendar_html += '</div>'
 st.markdown(calendar_html, unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
