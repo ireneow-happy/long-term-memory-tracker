@@ -238,7 +238,7 @@ with st.form("add_snippet_form"):
         snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
     with col2:
     
-    st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
+            st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
     snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
     review_days = st.text_input("回顧日（以逗號分隔）", value=st.session_state["review_days"])
 
@@ -259,7 +259,12 @@ with st.form("add_snippet_form"):
                 ])
 
         sheet.values().append(
-
+            spreadsheetId=spreadsheet_id,
+            range=sheet_tab,
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [[new_snippet_id, snippet_content, review_days, today.strftime("%Y/%m/%d"), "", "FALSE"]]}
+        ).execute()
         st.session_state["snippet_count"] += 1
         st.session_state["snippet_content"] = ""
         st.session_state["review_days"] = "1,3,7,14,30"
