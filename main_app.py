@@ -93,7 +93,7 @@ for i, row in df.iterrows():
     })
 
 
-# --- 週視圖（月曆格式，snippet ID 不換行，小字體，含勾選框）---
+# --- 週視圖（月曆格式，含 checkbox 勾選功能）---
 st.markdown("### 🗓️ 過去 4 週回顧任務")
 
 # 加上樣式
@@ -120,15 +120,11 @@ st.markdown("""
     font-weight: bold;
     margin-bottom: 4px;
 }
-.snippet-tag {
-    display: inline-block;
+.snippet-checkbox {
+    display: block;
+    margin: 2px 0;
     font-size: 11px;
-    margin: 1px 2px;
     white-space: nowrap;
-}
-.checked {
-    text-decoration: line-through;
-    color: gray;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -148,25 +144,30 @@ days_range = pd.date_range(start=start_of_week, end=end_date)
 first_day_idx = days_range[0].weekday()
 grid_days = [None] * first_day_idx + list(days_range)
 
-# 顯示月曆格子
-html = '<div class="calendar">'
+# 顯示月曆格子 + 勾選功能
+html_calendar = '<div class="calendar">'
 for d in grid_days:
     if d:
         day_str = f"{d.month}/{d.day}"
         snippets = review_map.get(d.date(), [])
-        inner = f"<strong>{day_str}</strong><br>"
+        cell_html = f"<strong>{day_str}</strong><br>"
         for item in snippets:
-            short = item["short_id"]
-            full = item["snippet_id"]
-            checked = item["checked"]
-            style = "checked" if checked else ""
-            checkbox = "✅" if checked else "⬜"
-            inner += f'<span class="snippet-tag {style}" title="{full}">{checkbox} {short}</span>'
-        html += f'<div class="day-cell">{inner}</div>'
+            checkbox_label = f"{item['short_id']}"
+            checkbox_key = item["key"]
+            checked = st.checkbox(checkbox_label, value=item["checked"], key=checkbox_key)
+            if checked != item["checked"]:
+                # 立即更新 Google Sheet
+                sheet.values().update(
+                    spreadsheetId=spreadsheet_id,
+                    range=f"{sheet_tab}!F{item['row_index']+1}",
+                    valueInputOption="USER_ENTERED",
+                    body={"values": [["TRUE" if checked else "FALSE"]]}
+                ).execute()
+        html_calendar += f'<div class="day-cell">{cell_html}</div>'
     else:
-        html += '<div class="day-cell">&nbsp;</div>'
-html += '</div>'
-st.markdown(html, unsafe_allow_html=True)
+        html_calendar += '<div class="day-cell">&nbsp;</div>'
+html_calendar += '</div>'
+st.markdown(html_calendar, unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
