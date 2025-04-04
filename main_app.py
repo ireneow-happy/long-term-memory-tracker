@@ -93,82 +93,80 @@ for i, row in df.iterrows():
     })
 
 
-# --- 週視圖（月曆格式，含 snippet ID + checkbox 可更新）---
+# --- 週視圖（月曆格式，checkbox 顯示在正確日期格內）---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
 # 加上樣式
 st.markdown("""
 <style>
-.calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-}
-.day-cell {
+.day-box {
     border: 1px solid #DDD;
     border-radius: 8px;
-    min-height: 80px;
-    padding: 4px;
+    min-height: 100px;
+    padding: 6px;
     font-size: 12px;
     transition: background-color 0.3s;
-    overflow-wrap: break-word;
 }
-.day-cell:hover {
-    background-color: #f0f0f0;
+.day-box:hover {
+    background-color: #f9f9f9;
 }
-.day-label {
-    text-align: center;
+.day-title {
     font-weight: bold;
     margin-bottom: 4px;
 }
-.snippet-checkbox {
+.checkbox-label {
     font-size: 11px;
-    white-space: nowrap;
-    margin: 2px 0;
+    margin: 1px 0;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # 星期列
 day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-st.markdown('<div class="calendar">' + ''.join(
-    [f'<div class="day-label">{d}</div>' for d in day_names]
-) + '</div>', unsafe_allow_html=True)
+cols = st.columns(7)
+for i, name in enumerate(day_names):
+    cols[i].markdown(f"<div class='day-title'>{name}</div>", unsafe_allow_html=True)
 
-# 計算日期範圍
+# 日期範圍
 start_of_week = today - timedelta(days=today.weekday())
-end_date = start_of_week + timedelta(days=27)
+end_date = start_of_week + timedelta(weeks=4, days=-1)
 days_range = pd.date_range(start=start_of_week, end=end_date)
 
-# 填補空格讓開頭為週一
-first_day_idx = days_range[0].weekday()
-grid_days = [None] * first_day_idx + list(days_range)
+# 建立每週資料
+weekly_days = []
+week = [None] * 7
+for d in days_range:
+    idx = d.weekday()
+    if idx == 0 and any(week):
+        weekly_days.append(week)
+        week = [None] * 7
+    week[idx] = d
+if any(week):
+    weekly_days.append(week)
 
-# 建立月曆格內容
-calendar_html = '<div class="calendar">'
-for d in grid_days:
-    if d:
-        day_str = f"{d.month}/{d.day}"
-        snippets = review_map.get(d.date(), [])
-        with st.container():
-            st.markdown(f'<div class="day-cell"><strong>{day_str}</strong>', unsafe_allow_html=True)
-            for item in snippets:
-                key = item["key"]
-                label = f"{item['short_id']}"
-                full_id = item["snippet_id"]
-                checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
-                if checked != item["checked"]:
-                    sheet.values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!F{item['row_index']+1}",
-                        valueInputOption="USER_ENTERED",
-                        body={"values": [["TRUE" if checked else "FALSE"]]}
-                    ).execute()
-            st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        calendar_html += '<div class="day-cell">&nbsp;</div>'
-calendar_html += '</div>'
-st.markdown(calendar_html, unsafe_allow_html=True)
+# 每週一列 columns，對齊顯示 checkbox 與 ID
+for week in weekly_days:
+    cols = st.columns(7)
+    for i, day in enumerate(week):
+        with cols[i]:
+            if day:
+                st.markdown(f"<div class='day-box'><div class='day-title'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
+                snippets = review_map.get(day.date(), [])
+                for item in snippets:
+                    key = item["key"]
+                    label = item["short_id"]
+                    full_id = item["snippet_id"]
+                    checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
+                    if checked != item["checked"]:
+                        sheet.values().update(
+                            spreadsheetId=spreadsheet_id,
+                            range=f"{sheet_tab}!F{item['row_index']+1}",
+                            valueInputOption="USER_ENTERED",
+                            body={"values": [["TRUE" if checked else "FALSE"]]}
+                        ).execute()
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div class='day-box'>&nbsp;</div>", unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
