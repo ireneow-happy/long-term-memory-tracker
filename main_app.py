@@ -93,16 +93,16 @@ for i, row in df.iterrows():
     })
 
 
-# --- 週視圖（月曆格式：checkbox 與 snippet ID 放進格子內）---
+# --- 週視圖（月曆格式：checkbox 放入格子 + snippet ID 有格線 + 日期列縮小）---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# 自定樣式
+# 樣式調整：加入 snippet ID checkbox 格線 + 日期列縮小
 st.markdown("""
 <style>
 .day-box {
     border: 1px solid #DDD;
     border-radius: 8px;
-    min-height: 90px;
+    min-height: 100px;
     padding: 6px;
     font-size: 12px;
     transition: background-color 0.3s;
@@ -113,29 +113,40 @@ st.markdown("""
 .day-title {
     font-weight: bold;
     margin-bottom: 4px;
+    font-size: 13px;
+    text-align: center;
+}
+.week-header {
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px;
+}
+.snippet-box {
+    border-top: 1px solid #ccc;
+    margin-top: 4px;
+    padding-top: 4px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 星期標題列
+# 星期標題列（固定高度，縮小字體）
 day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 cols = st.columns(7)
 for i, name in enumerate(day_names):
-    cols[i].markdown(f"<div class='day-title'>{name}</div>", unsafe_allow_html=True)
+    cols[i].markdown(f"<div class='week-header'>{name}</div>", unsafe_allow_html=True)
 
-# 建立 4 週的資料結構
+# 計算日期區間
 start_of_week = today - timedelta(days=today.weekday())
 end_date = start_of_week + timedelta(days=27)
 date_range = pd.date_range(start=start_of_week, end=end_date)
 
-# 補空格到完整週
+# 補空格至整數週
 first_day_index = date_range[0].weekday()
 padded_days = [None] * first_day_index + list(date_range)
-
-# 以每 7 天為一週切割
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-# 顯示每週一列（columns），並把 checkbox 放進每格中
+# 顯示週曆，每週一列
 for week in weeks:
     cols = st.columns(7)
     for i, day in enumerate(week):
@@ -143,18 +154,21 @@ for week in weeks:
             if day:
                 st.markdown(f"<div class='day-box'><div class='day-title'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
                 snippets = review_map.get(day.date(), [])
-                for item in snippets:
-                    key = item["key"]
-                    label = item["short_id"]
-                    full_id = item["snippet_id"]
-                    checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
-                    if checked != item["checked"]:
-                        sheet.values().update(
-                            spreadsheetId=spreadsheet_id,
-                            range=f"{sheet_tab}!F{item['row_index']+1}",
-                            valueInputOption="USER_ENTERED",
-                            body={"values": [["TRUE" if checked else "FALSE"]]}
-                        ).execute()
+                if snippets:
+                    st.markdown("<div class='snippet-box'>", unsafe_allow_html=True)
+                    for item in snippets:
+                        key = item["key"]
+                        label = item["short_id"]
+                        full_id = item["snippet_id"]
+                        checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
+                        if checked != item["checked"]:
+                            sheet.values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f"{sheet_tab}!F{item['row_index']+1}",
+                                valueInputOption="USER_ENTERED",
+                                body={"values": [["TRUE" if checked else "FALSE"]]}
+                            ).execute()
+                    st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.markdown("<div class='day-box'>&nbsp;</div>", unsafe_allow_html=True)
