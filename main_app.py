@@ -55,16 +55,12 @@ if st.session_state["prev_snippet_id"] != new_snippet_id:
 st.title("🌀 記憶追蹤器")
 
 # --- 雙月曆顯示 ---
-
-# --- 雙月曆顯示 ---
 st.markdown("## 📅 本月與下月複習排程")
 
-# 計算本月與下月的日期範圍
 first_day = today.replace(day=1)
 last_day_next_month = (first_day.replace(day=28) + timedelta(days=4)).replace(day=1) + timedelta(days=31)
 end_date = last_day_next_month
 
-# 建立週結構（每週一列）
 days_range = pd.date_range(start=first_day, end=end_date)
 weeks = []
 week = [None]*7
@@ -77,7 +73,6 @@ for d in days_range:
 if any(week):
     weeks.append(week)
 
-# 準備資料
 df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
 df["completed"] = df["completed"].fillna("FALSE")
 
@@ -88,32 +83,52 @@ for i, row in df.iterrows():
     review_day = row["review_date"].date()
     if review_day not in review_map:
         review_map[review_day] = []
+    short_id = row["snippet_id"][-7:] if len(row["snippet_id"]) > 7 else row["snippet_id"]
     review_map[review_day].append({
         "snippet_id": row["snippet_id"],
+        "short_id": short_id,
         "row_index": i + 1,
         "checked": row["completed"] == "TRUE",
         "key": f"{row['snippet_id']}_{i}"
     })
 
-# 顯示週曆表格，嵌入 checkbox
+# 顯示表格
 st.markdown("### 週視圖（複習排程）")
-from streamlit import columns
+calendar_html = """<style>
+.calendar {border-collapse: collapse; width: 100%;}
+.calendar td, .calendar th {border: 1px solid #ccc; padding: 6px; vertical-align: top; font-size: 0.85em;}
+.calendar th {background: #f0f0f0; text-align: center;}
+.calendar td {height: 100px; min-width: 120px;}
+.calendar .date {font-weight: bold; margin-bottom: 4px;}
+</style>
+<table class='calendar'>
+<tr>
+<th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th>
+</tr>
+"""
 
 for week in weeks:
-    cols = st.columns(7)
-    for idx, day in enumerate(week):
-        with cols[idx]:
-            if day:
-                st.markdown(f"**{day.month}/{day.day}**")
-                for entry in review_map.get(day.date(), []):
-                    checked = st.checkbox(entry["snippet_id"], value=entry["checked"], key=entry["key"])
-                    if checked != entry["checked"]:
-                        sheet.values().update(
-                            spreadsheetId=spreadsheet_id,
-                            range=f"{sheet_tab}!F{entry['row_index']+1}",
-                            valueInputOption="USER_ENTERED",
-                            body={"values": [["TRUE" if checked else "FALSE"]]}
-                        ).execute()
+    calendar_html += "<tr>"
+    for day in week:
+        cell = ""
+        if day:
+            cell += f"<div class='date'>{day.month}/{day.day}</div>"
+            for entry in review_map.get(day.date(), []):
+                key = entry["key"]
+                label = entry["short_id"]
+                checked = st.checkbox(label, value=entry["checked"], key=key)
+                if checked != entry["checked"]:
+                    sheet.values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"{sheet_tab}!F{entry['row_index']+1}",
+                        valueInputOption="USER_ENTERED",
+                        body={"values": [["TRUE" if checked else "FALSE"]]}
+                    ).execute()
+        calendar_html += f"<td>{cell}</td>"
+    calendar_html += "</tr>"
+
+calendar_html += "</table>"
+st.markdown(calendar_html, unsafe_allow_html=True)
 
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
