@@ -88,10 +88,11 @@ for i, row in df.iterrows():
 
 
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# CSS 完整控制 layout，包含日期與 checkbox 在同一格
+# 加入 CSS：讓每格排版清楚、整齊
 st.markdown("""
 <style>
     .week-header {
@@ -106,9 +107,6 @@ st.markdown("""
         min-height: 100px;
         padding: 6px;
         font-size: 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
     }
     .date-label {
         font-size: 12px;
@@ -119,65 +117,69 @@ st.markdown("""
         padding-left: 2px;
         line-height: 1.6;
     }
+    .checkbox-list input[type=checkbox] {
+        margin-right: 6px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# 計算日期範圍
+# 日期處理
 start_date = today - timedelta(days=today.weekday())
 end_date = start_date + timedelta(days=27)
 date_range = pd.date_range(start=start_date, end=end_date)
 padded_days = [None] * date_range[0].weekday() + list(date_range)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-# 星期標題列
+# 星期列
 cols = st.columns(7)
-for i, label in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-    cols[i].markdown(f"<div class='week-header'>{label}</div>", unsafe_allow_html=True)
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+for i in range(7):
+    cols[i].markdown(f"<div class='week-header'>{days[i]}</div>", unsafe_allow_html=True)
 
-# 建立表單
-with st.form("calendar_form"):
-    checkbox_states = {}
+# HTML form
+with st.form("weekly_snippets"):
+    checkbox_inputs = {}
 
     for week in weeks:
         cols = st.columns(7)
         for i, day in enumerate(week):
             with cols[i]:
-                if day is None:
+                if not day:
                     st.markdown("<div class='calendar-cell'>&nbsp;</div>", unsafe_allow_html=True)
                     continue
 
                 snippets = review_map.get(day.date(), [])
-                # 整格 cell HTML（包含日期與 checkbox）
-                cell_html = f"<div class='calendar-cell'>"
-                cell_html += f"<div class='date-label'>{day.month}/{day.day}</div><div class='checkbox-list'>"
+                html = f"<div class='calendar-cell'>"
+                html += f"<div class='date-label'>{day.month}/{day.day}</div>"
+                html += "<div class='checkbox-list'>"
 
                 for item in snippets:
-                    key = item["key"]
-                    short_id = item["short_id"]
-                    default = item["checked"]
-                    checkbox_states[key] = st.checkbox(short_id, value=default, key=key)
+                    html_id = item["key"]
+                    snippet_id = item["short_id"]
+                    checked = "checked" if item["checked"] else ""
+                    html += f"<label><input type='checkbox' name='{html_id}' {checked}> {snippet_id}</label><br>"
 
-                cell_html += "</div></div>"
-                st.markdown(cell_html, unsafe_allow_html=True)
+                html += "</div></div>"
+                st.markdown(html, unsafe_allow_html=True)
 
     submitted = st.form_submit_button("✅ 儲存所有勾選結果")
     if submitted:
         for week in weeks:
             for day in week:
-                if day is None:
+                if not day:
                     continue
                 snippets = review_map.get(day.date(), [])
                 for item in snippets:
                     key = item["key"]
-                    new_val = checkbox_states.get(key, False)
-                    if new_val != item["checked"]:
+                    user_checked = st.session_state.get(key, False)
+                    if user_checked != item["checked"]:
                         sheet.values().update(
                             spreadsheetId=spreadsheet_id,
                             range=f"{sheet_tab}!F{item['row_index']+1}",
                             valueInputOption="USER_ENTERED",
-                            body={"values": [["TRUE" if new_val else "FALSE"]]}
+                            body={"values": [["TRUE" if user_checked else "FALSE"]]}
                         ).execute()
-        st.success("✅ 勾選狀態已更新")
+        st.success("✅ 已更新 Google Sheets")
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
