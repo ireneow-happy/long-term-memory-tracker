@@ -2,10 +2,6 @@ def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
 
     # --- 週視圖（月曆格式） ---
 
-    end_date = start_date + timedelta(days=27)
-    date_range = pd.date_range(start=start_date, end=end_date)
-    padded_days = [None] * start_date.weekday() + list(date_range)
-    weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
     st.markdown("### 🗓️ 最近 4 週回顧任務")
 
@@ -25,14 +21,32 @@ def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
     # 根據 offset 計算週曆起始日
     user_start_date = today + timedelta(days=st.session_state['calendar_offset'])
     user_start_date = user_start_date - timedelta(days=user_start_date.weekday())
-    start_date = user_start_date
+
+
+    # 加入 CSS：讓每格排版清楚、整齊
+
+    # 初始化跳頁狀態
+    if 'calendar_offset' not in st.session_state:
+        st.session_state['calendar_offset'] = 0
+
+    col1, col2, col3 = st.columns([1, 1, 5])
+    with col1:
+        if st.button("⏪ 前四週"):
+            st.session_state['calendar_offset'] -= 28
+    with col2:
+        if st.button("⏩ 後四週"):
+            st.session_state['calendar_offset'] += 28
+
+    # 計算起始週與顯示區間
+    user_start_date = today + timedelta(days=st.session_state['calendar_offset'])
+    start_date = user_start_date - timedelta(days=user_start_date.weekday())
     end_date = start_date + timedelta(days=27)
+    st.markdown(f"🗓️ 顯示範圍：{start_date.strftime('%Y/%m/%d')} ~ {end_date.strftime('%Y/%m/%d')}", unsafe_allow_html=True)
+
     date_range = pd.date_range(start=start_date, end=end_date)
     padded_days = [None] * start_date.weekday() + list(date_range)
     weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-
-    # 加入 CSS：讓每格排版清楚、整齊
     st.markdown("""
     <style>
         .week-header {
@@ -218,7 +232,6 @@ with st.form("add_snippet_form"):
     with col1:
         snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
     with col2:
-        snippet_date = st.date_input("建立日期", value=today)
 
     st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
     snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
@@ -272,7 +285,6 @@ if selected_id:
             with col1:
                 new_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=["note", "vocab", "quote", "other"].index(old_type))
             with col2:
-                new_date = st.date_input("建立日期", value=datetime.datetime.strptime(old_date, "%Y-%m-%d").date())
             new_content = st.text_area("內容", value=old_content)
 
             update_btn = st.form_submit_button("更新 Snippet")
