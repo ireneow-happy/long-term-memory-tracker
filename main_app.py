@@ -87,9 +87,11 @@ for i, row in df.iterrows():
 
 
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
+# CSS 完整控制 layout，包含日期與 checkbox 在同一格
 st.markdown("""
 <style>
     .week-header {
@@ -104,12 +106,14 @@ st.markdown("""
         min-height: 100px;
         padding: 6px;
         font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
     }
     .date-label {
         font-size: 12px;
         font-weight: bold;
-        text-align: left;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
     .checkbox-list {
         padding-left: 2px;
@@ -118,21 +122,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# 計算日期範圍
 start_date = today - timedelta(days=today.weekday())
 end_date = start_date + timedelta(days=27)
 date_range = pd.date_range(start=start_date, end=end_date)
 padded_days = [None] * date_range[0].weekday() + list(date_range)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-# 星期列
+# 星期標題列
 cols = st.columns(7)
-weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-for i in range(7):
-    cols[i].markdown(f"<div class='week-header'>{weekdays[i]}</div>", unsafe_allow_html=True)
+for i, label in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+    cols[i].markdown(f"<div class='week-header'>{label}</div>", unsafe_allow_html=True)
 
-# 建立一個表單
+# 建立表單
 with st.form("calendar_form"):
     checkbox_states = {}
+
     for week in weeks:
         cols = st.columns(7)
         for i, day in enumerate(week):
@@ -142,15 +147,18 @@ with st.form("calendar_form"):
                     continue
 
                 snippets = review_map.get(day.date(), [])
-                html = f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div><div class='checkbox-list'>"
+                # 整格 cell HTML（包含日期與 checkbox）
+                cell_html = f"<div class='calendar-cell'>"
+                cell_html += f"<div class='date-label'>{day.month}/{day.day}</div><div class='checkbox-list'>"
 
                 for item in snippets:
                     key = item["key"]
+                    short_id = item["short_id"]
                     default = item["checked"]
-                    checkbox_states[key] = st.checkbox(item["short_id"], value=default, key=key)
+                    checkbox_states[key] = st.checkbox(short_id, value=default, key=key)
 
-                html += "</div></div>"
-                st.markdown(html, unsafe_allow_html=True)
+                cell_html += "</div></div>"
+                st.markdown(cell_html, unsafe_allow_html=True)
 
     submitted = st.form_submit_button("✅ 儲存所有勾選結果")
     if submitted:
