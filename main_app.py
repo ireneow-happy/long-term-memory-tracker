@@ -1,3 +1,4 @@
+import streamlit as st
 def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
 
     # --- 週視圖（月曆格式） ---
@@ -138,7 +139,6 @@ import time
 
     # --- 程式開始 ---
 
-    import streamlit as st
     from datetime import date, timedelta
     st.set_page_config(page_title="記憶追蹤器", layout="centered")
     import pandas as pd
