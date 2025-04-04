@@ -1,8 +1,6 @@
-import streamlit as st
-from datetime import datetime, timedelta
-import pandas as pd
-
 def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
+    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today)
+
     # --- 週視圖（月曆格式） ---
     st.markdown("### 🗓️ 最近 4 週回顧任務")
 
@@ -38,11 +36,6 @@ def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
     """, unsafe_allow_html=True)
 
     # 日期處理
-    start_date = today - timedelta(days=today.weekday())
-    end_date = start_date + timedelta(days=27)
-    date_range = pd.date_range(start=start_date, end=end_date)
-    padded_days = [None] * date_range[0].weekday() + list(date_range)
-    weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
     # 星期列
     cols = st.columns(7)
