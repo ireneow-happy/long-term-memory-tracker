@@ -1,59 +1,13 @@
 import streamlit as st
+from datetime import datetime, timedelta
+import pandas as pd
+
 def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
-
     # --- 週視圖（月曆格式） ---
-
-
     st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-    # 初始化 session 狀態
-    if 'calendar_offset' not in st.session_state:
-        st.session_state['calendar_offset'] = 0
-
-    # 跳轉按鈕
-    col1, col2, _ = st.columns([1,1,5])
-    with col1:
-        if st.button("⏪ 前四週"):
-            st.session_state['calendar_offset'] -= 28
-    with col2:
-        if st.button("⏩ 後四週"):
-            st.session_state['calendar_offset'] += 28
-
-    # 根據 offset 計算週曆起始日
-    user_start_date = today + timedelta(days=st.session_state['calendar_offset'])
-    user_start_date = user_start_date - timedelta(days=user_start_date.weekday())
-
-
     # 加入 CSS：讓每格排版清楚、整齊
-
-    # 初始化跳頁狀態
-    if 'calendar_offset' not in st.session_state:
-        st.session_state['calendar_offset'] = 0
-
-    col1, col2, col3 = st.columns([1, 1, 5])
-    with col1:
-        if st.button("⏪ 前四週"):
-            st.session_state['calendar_offset'] -= 28
-    with col2:
-        if st.button("⏩ 後四週"):
-            st.session_state['calendar_offset'] += 28
-
-    # 計算起始週與顯示區間
-    user_start_date = today + timedelta(days=st.session_state['calendar_offset'])
-    start_date = user_start_date - timedelta(days=user_start_date.weekday())
-    end_date = start_date + timedelta(days=27)
-    st.markdown(f"🗓️ 顯示範圍：{start_date.strftime('%Y/%m/%d')} ~ {end_date.strftime('%Y/%m/%d')}", unsafe_allow_html=True)
-
-    date_range = pd.date_range(start=start_date, end=end_date)
-    padded_days = [None] * start_date.weekday() + list(date_range)
-    weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
-
     st.markdown("""
-import time
-from google.oauth2 import service_account
-    start_time = time.time()
-    st.info("📊 正在載入週曆與勾選狀態，請稍候...")
-    api_update_count = 0
     <style>
         .week-header {
             font-weight: bold;
@@ -84,6 +38,11 @@ from google.oauth2 import service_account
     """, unsafe_allow_html=True)
 
     # 日期處理
+    start_date = today - timedelta(days=today.weekday())
+    end_date = start_date + timedelta(days=27)
+    date_range = pd.date_range(start=start_date, end=end_date)
+    padded_days = [None] * date_range[0].weekday() + list(date_range)
+    weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
     # 星期列
     cols = st.columns(7)
@@ -134,17 +93,18 @@ from google.oauth2 import service_account
                                 valueInputOption="USER_ENTERED",
                                 body={"values": [["TRUE" if user_checked else "FALSE"]]}
                             ).execute()
-                            api_update_count += 1
             st.success("✅ 已更新 Google Sheets")
 
 
-    # --- 程式開始 ---
+# --- 程式開始 ---
 
-    from datetime import date, timedelta
-    st.set_page_config(page_title="記憶追蹤器", layout="centered")
-    import pandas as pd
-    import datetime
-    from googleapiclient.discovery import build
+import streamlit as st
+from datetime import date, timedelta
+st.set_page_config(page_title="記憶追蹤器", layout="centered")
+import pandas as pd
+import datetime
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 # --- 初始化 session_state ---
 def init_session_state():
@@ -237,8 +197,9 @@ with st.form("add_snippet_form"):
     with col1:
         snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
     with col2:
-    
-            st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
+        snippet_date = st.date_input("建立日期", value=today)
+
+    st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
     snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
     review_days = st.text_input("回顧日（以逗號分隔）", value=st.session_state["review_days"])
 
@@ -262,9 +223,9 @@ with st.form("add_snippet_form"):
             spreadsheetId=spreadsheet_id,
             range=sheet_tab,
             valueInputOption="USER_ENTERED",
-            insertDataOption="INSERT_ROWS",
-            body={"values": [[new_snippet_id, snippet_content, review_days, today.strftime("%Y/%m/%d"), "", "FALSE"]]}
+            body={"values": rows_to_add}
         ).execute()
+
         st.session_state["snippet_count"] += 1
         st.session_state["snippet_content"] = ""
         st.session_state["review_days"] = "1,3,7,14,30"
@@ -272,7 +233,7 @@ with st.form("add_snippet_form"):
         st.success("✅ Snippet 已新增！")
         st.rerun()
 
-    # --- 修改 Snippet ---
+# --- 修改 Snippet ---
 st.markdown("---")
 st.markdown("## 📝 修改 Snippet")
 unique_ids = df["snippet_id"].unique()
@@ -290,7 +251,8 @@ if selected_id:
             with col1:
                 new_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=["note", "vocab", "quote", "other"].index(old_type))
             with col2:
-                new_content = st.text_area("內容", value=old_content)
+                new_date = st.date_input("建立日期", value=datetime.datetime.strptime(old_date, "%Y-%m-%d").date())
+            new_content = st.text_area("內容", value=old_content)
 
             update_btn = st.form_submit_button("更新 Snippet")
             if update_btn:
@@ -305,20 +267,18 @@ if selected_id:
                 ] for i, offset in enumerate(review_offsets)]
 
                 matching_indices = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id]
-for row_index, row_data in zip(matching_indices, updated_rows):
-    sheet.values().update(
-        spreadsheetId=spreadsheet_id,
-        range=f"{sheet_tab}!A{row_index}:F{row_index}",
-        valueInputOption="USER_ENTERED",
-        body={"values": [row_data]}
-    ).execute()
-    api_update_count += 1
-    st.success("✅ Snippet 已更新。")
-    st.rerun()
+                for row_index, row_data in zip(matching_indices, updated_rows):
+                    sheet.values().update(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"{sheet_tab}!A{row_index+1}:F{row_index+1}",
+                        valueInputOption="USER_ENTERED",
+                        body={"values": [row_data]}
+                    ).execute()
 
+                st.success("✅ Snippet 已更新。")
+                st.rerun()
 
-    # --- 刪除 Snippet ---
-    # --- 刪除 Snippet ---
+# --- 刪除 Snippet ---
 st.markdown("---")
 st.markdown("## 🗑️ 刪除 Snippet")
 selected_del_id = st.selectbox("選擇要刪除的 Snippet ID", unique_ids, key="delete")
@@ -329,7 +289,7 @@ if selected_del_id:
         for index in sorted([i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_del_id], reverse=True):
             sheet.values().clear(
                 spreadsheetId=spreadsheet_id,
-                range=f"{sheet_tab}!A{index}:F{index}"
+                range=f"{sheet_tab}!A{index+1}:F{index+1}"
             ).execute()
 
         st.success("✅ Snippet 已刪除。")
