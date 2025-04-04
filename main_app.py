@@ -232,7 +232,7 @@ with st.form("add_snippet_form"):
     with col1:
         snippet_type = st.selectbox("類型", ["note", "vocab", "quote", "other"], index=0)
     with col2:
-
+    
     st.text_input("Snippet ID", value=new_snippet_id, disabled=True)
     snippet_content = st.text_area("內容", value=st.session_state["snippet_content"])
     review_days = st.text_input("回顧日（以逗號分隔）", value=st.session_state["review_days"])
