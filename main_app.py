@@ -78,10 +78,11 @@ for i, row in df.iterrows():
     })
 
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# CSS 样式：完全對齊你提供的設計
+# CSS 样式：符合你提供的設計
 st.markdown("""
 <style>
     .week-header {
@@ -94,9 +95,13 @@ st.markdown("""
     .calendar-cell {
         border: 1px solid #ccc;
         padding: 6px 4px;
-        min-height: 100px;
+        min-height: 120px;
         font-size: 12px;
         vertical-align: top;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
     }
     .date-label {
         font-weight: bold;
@@ -104,6 +109,10 @@ st.markdown("""
         margin-bottom: 6px;
         padding-left: 2px;
         text-align: left;
+    }
+    .checkbox-block {
+        width: 100%;
+        margin-top: 2px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -131,18 +140,23 @@ for week in weeks:
                 st.markdown("<div class='calendar-cell'>&nbsp;</div>", unsafe_allow_html=True)
                 continue
 
-            # 格內標題 + checkbox
-            st.markdown(f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
+            content = f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div>"
+            st.markdown(content, unsafe_allow_html=True)
+
             snippets = review_map.get(day.date(), [])
             for item in snippets:
-                checked = st.checkbox(item["short_id"], value=item["checked"], key=item["key"])
-                if checked != item["checked"]:
-                    sheet.values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!F{item['row_index']+1}",
-                        valueInputOption="USER_ENTERED",
-                        body={"values": [["TRUE" if checked else "FALSE"]]}
-                    ).execute()
+                with st.container():
+                    st.markdown("<div class='checkbox-block'>", unsafe_allow_html=True)
+                    checked = st.checkbox(item["short_id"], value=item["checked"], key=item["key"])
+                    if checked != item["checked"]:
+                        sheet.values().update(
+                            spreadsheetId=spreadsheet_id,
+                            range=f"{sheet_tab}!F{item['row_index']+1}",
+                            valueInputOption="USER_ENTERED",
+                            body={"values": [["TRUE" if checked else "FALSE"]]}
+                        ).execute()
+                    st.markdown("</div>", unsafe_allow_html=True)
+
             st.markdown("</div>", unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
