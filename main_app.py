@@ -1,16 +1,36 @@
 def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
-    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today, key='weekly_calendar_start_date')
 
     # --- 週視圖（月曆格式） ---
 
-    user_start_date = st.date_input('📅 選擇起始週（系統會自動找當週一）', value=today, key='weekly_calendar_start_date')
-    start_date = user_start_date - timedelta(days=user_start_date.weekday())
     end_date = start_date + timedelta(days=27)
     date_range = pd.date_range(start=start_date, end=end_date)
     padded_days = [None] * start_date.weekday() + list(date_range)
     weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
     st.markdown("### 🗓️ 最近 4 週回顧任務")
+
+    # 初始化 session 狀態
+    if 'calendar_offset' not in st.session_state:
+        st.session_state['calendar_offset'] = 0
+
+    # 跳轉按鈕
+    col1, col2, _ = st.columns([1,1,5])
+    with col1:
+        if st.button("⏪ 前四週"):
+            st.session_state['calendar_offset'] -= 28
+    with col2:
+        if st.button("⏩ 後四週"):
+            st.session_state['calendar_offset'] += 28
+
+    # 根據 offset 計算週曆起始日
+    user_start_date = today + timedelta(days=st.session_state['calendar_offset'])
+    user_start_date = user_start_date - timedelta(days=user_start_date.weekday())
+    start_date = user_start_date
+    end_date = start_date + timedelta(days=27)
+    date_range = pd.date_range(start=start_date, end=end_date)
+    padded_days = [None] * start_date.weekday() + list(date_range)
+    weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
+
 
     # 加入 CSS：讓每格排版清楚、整齊
     st.markdown("""
