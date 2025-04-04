@@ -92,25 +92,76 @@ for i, row in df.iterrows():
         "key": f"chk_{row['snippet_id']}_{i}"
     })
 
-st.markdown("### 週視圖（含勾選項目）")
-for week in weeks:
-    cols = st.columns(7)
-    for i, day in enumerate(week):
-        with cols[i]:
-            if day:
-                st.markdown(f"**{day.month}/{day.day}**")
-                for item in review_map.get(day.date(), []):
-                    new_state = st.checkbox(item["short_id"], value=item["checked"], key=item["key"])
-                    if new_state != item["checked"]:
-                        sheet.values().update(
-                            spreadsheetId=spreadsheet_id,
-                            range=f"{sheet_tab}!F{item['row_index']+1}",
-                            valueInputOption="USER_ENTERED",
-                            body={"values": [["TRUE" if new_state else "FALSE"]]}
-                        ).execute()
-            else:
-                st.markdown(" ")
 
+# --- 週視圖（近 4 週）+ hover + tooltip ---
+st.markdown("### 🗓️ 過去 4 週回顧任務")
+
+# 加上樣式
+st.markdown("""
+<style>
+.hover-box {
+    padding: 6px;
+    border: 1px solid #DDD;
+    border-radius: 8px;
+    min-height: 50px;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+.hover-box:hover {
+    background-color: #f0f0f0;
+}
+.grid-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.grid-cell {
+    width: 13%;
+}
+.day-label {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 6px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 計算日期
+start_of_week = today - timedelta(days=today.weekday())
+last_day = start_of_week + timedelta(weeks=4, days=-1)
+date_range = pd.date_range(start=start_of_week, end=last_day)
+
+# 建立每週資料
+weekly_view = []
+week = [None]*7
+for d in date_range:
+    weekday = d.weekday()
+    if weekday == 0 and any(week):
+        weekly_view.append(week)
+        week = [None]*7
+    week[weekday] = d
+if any(week):
+    weekly_view.append(week)
+
+# 顯示星期列
+day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+st.markdown('<div class="grid-row">' + ''.join([f'<div class="grid-cell day-label">{day}</div>' for day in day_names]) + '</div>', unsafe_allow_html=True)
+
+# 顯示每週區塊
+for week in weekly_view:
+    html_row = '<div class="grid-row">'
+    for day in week:
+        if day:
+            date_str = f"{day.month}/{day.day}"
+            items = review_map.get(day.date(), [])
+            content = f"<strong>{date_str}</strong><br>"
+            for item in items:
+                content += f'<div title="Snippet ID: {item["snippet_id"]}">🔲 {item["short_id"]}</div>'
+            html_row += f'<div class="grid-cell"><div class="hover-box">{content}</div></div>'
+        else:
+            html_row += '<div class="grid-cell"><div class="hover-box">&nbsp;</div></div>'
+    html_row += '</div>'
+    st.markdown(html_row, unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
