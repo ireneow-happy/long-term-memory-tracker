@@ -127,6 +127,11 @@ import time
                         user_checked = st.session_state.get(key, False)
                         if user_checked != item["checked"]:
                             sheet.values().update(
+                                spreadsheetId=spreadsheet_id,
+                                range=f"{sheet_tab}!F{item['row_index']+1}",
+                                valueInputOption="USER_ENTERED",
+                                body={"values": [["TRUE" if user_checked else "FALSE"]]}
+                            ).execute()
                             api_update_count += 1
             st.success("✅ 已更新 Google Sheets")
 
