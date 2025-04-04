@@ -93,21 +93,16 @@ for i, row in df.iterrows():
     })
 
 
-# --- 週視圖（月曆格式，checkbox 完全放入格子中）---
+# --- 週視圖（月曆格式：checkbox 與 snippet ID 放進格子內）---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# 加上樣式
+# 自定樣式
 st.markdown("""
 <style>
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-}
 .day-box {
     border: 1px solid #DDD;
     border-radius: 8px;
-    min-height: 100px;
+    min-height: 90px;
     padding: 6px;
     font-size: 12px;
     transition: background-color 0.3s;
@@ -117,58 +112,52 @@ st.markdown("""
 }
 .day-title {
     font-weight: bold;
-    margin-bottom: 6px;
-}
-.checkbox-label {
-    font-size: 11px;
-    white-space: nowrap;
-    margin: 2px 0;
+    margin-bottom: 4px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 星期列
+# 星期標題列
 day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-st.markdown('<div class="calendar-grid">' + ''.join(
-    [f'<div class="day-box day-title">{d}</div>' for d in day_names]
-) + '</div>', unsafe_allow_html=True)
+cols = st.columns(7)
+for i, name in enumerate(day_names):
+    cols[i].markdown(f"<div class='day-title'>{name}</div>", unsafe_allow_html=True)
 
-# 計算日期
+# 建立 4 週的資料結構
 start_of_week = today - timedelta(days=today.weekday())
 end_date = start_of_week + timedelta(days=27)
-days_range = pd.date_range(start=start_of_week, end=end_date)
+date_range = pd.date_range(start=start_of_week, end=end_date)
 
-# 填滿為整數週（補空格）
-first_day_idx = days_range[0].weekday()
-grid_days = [None] * first_day_idx + list(days_range)
+# 補空格到完整週
+first_day_index = date_range[0].weekday()
+padded_days = [None] * first_day_index + list(date_range)
 
-# 建立格子內容
-calendar_html = '<div class="calendar-grid">'
-for d in grid_days:
-    if d:
-        day_str = f"{d.month}/{d.day}"
-        snippets = review_map.get(d.date(), [])
-        box_content = f"<div class='day-box'><div class='day-title'>{day_str}</div>"
+# 以每 7 天為一週切割
+weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-        for item in snippets:
-            key = item["key"]
-            label = item["short_id"]
-            full_id = item["snippet_id"]
-            checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
-            if checked != item["checked"]:
-                sheet.values().update(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"{sheet_tab}!F{item['row_index']+1}",
-                    valueInputOption="USER_ENTERED",
-                    body={"values": [["TRUE" if checked else "FALSE"]]}
-                ).execute()
-
-        box_content += "</div>"
-        calendar_html += box_content
-    else:
-        calendar_html += "<div class='day-box'>&nbsp;</div>"
-calendar_html += '</div>'
-st.markdown(calendar_html, unsafe_allow_html=True)
+# 顯示每週一列（columns），並把 checkbox 放進每格中
+for week in weeks:
+    cols = st.columns(7)
+    for i, day in enumerate(week):
+        with cols[i]:
+            if day:
+                st.markdown(f"<div class='day-box'><div class='day-title'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
+                snippets = review_map.get(day.date(), [])
+                for item in snippets:
+                    key = item["key"]
+                    label = item["short_id"]
+                    full_id = item["snippet_id"]
+                    checked = st.checkbox(label, value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
+                    if checked != item["checked"]:
+                        sheet.values().update(
+                            spreadsheetId=spreadsheet_id,
+                            range=f"{sheet_tab}!F{item['row_index']+1}",
+                            valueInputOption="USER_ENTERED",
+                            body={"values": [["TRUE" if checked else "FALSE"]]}
+                        ).execute()
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div class='day-box'>&nbsp;</div>", unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
