@@ -84,10 +84,11 @@ for i, row in df.iterrows():
 
 
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# CSS
+# CSS：排版一致，日期與 checkbox 一起包住
 st.markdown("""
 <style>
     .week-header {
@@ -111,24 +112,25 @@ st.markdown("""
     }
     .checkbox-list {
         padding-left: 2px;
-        line-height: 1.4;
+        line-height: 1.6;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 日期資料
+# 日期準備
 start_date = today - timedelta(days=today.weekday())
 end_date = start_date + timedelta(days=27)
 date_range = pd.date_range(start=start_date, end=end_date)
 padded_days = [None] * date_range[0].weekday() + list(date_range)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-# 星期列
+# 星期標題列
 cols = st.columns(7)
-for i, label in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-    cols[i].markdown(f"<div class='week-header'>{label}</div>", unsafe_allow_html=True)
+weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+for i in range(7):
+    cols[i].markdown(f"<div class='week-header'>{weekdays[i]}</div>", unsafe_allow_html=True)
 
-# 各週資料列（一次性渲染整格內容）
+# 每週行
 for week in weeks:
     cols = st.columns(7)
     for i, day in enumerate(week):
@@ -139,16 +141,17 @@ for week in weeks:
 
             snippets = review_map.get(day.date(), [])
             html = f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div><div class='checkbox-list'>"
+
             for item in snippets:
-                key = item["key"]
-                current = st.session_state.get(key, item["checked"])
-                new_value = st.checkbox(item["short_id"], value=current, key=key)
-                if new_value != item["checked"]:
+                state_key = f"{item['key']}_html"
+                current = st.session_state.get(state_key, item["checked"])
+                new_val = st.checkbox(item["short_id"], value=current, key=state_key)
+                if new_val != item["checked"]:
                     sheet.values().update(
                         spreadsheetId=spreadsheet_id,
                         range=f"{sheet_tab}!F{item['row_index']+1}",
                         valueInputOption="USER_ENTERED",
-                        body={"values": [["TRUE" if new_value else "FALSE"]]}
+                        body={"values": [["TRUE" if new_val else "FALSE"]]}
                     ).execute()
             html += "</div></div>"
             st.markdown(html, unsafe_allow_html=True)
