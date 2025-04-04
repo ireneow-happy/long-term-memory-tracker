@@ -131,7 +131,7 @@ def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
             st.success("✅ 已更新 Google Sheets")
 
 
-# --- 程式開始 ---
+    # --- 程式開始 ---
 
 import streamlit as st
 from datetime import date, timedelta
@@ -267,7 +267,7 @@ with st.form("add_snippet_form"):
         st.success("✅ Snippet 已新增！")
         st.rerun()
 
-# --- 修改 Snippet ---
+    # --- 修改 Snippet ---
 st.markdown("---")
 st.markdown("## 📝 修改 Snippet")
 unique_ids = df["snippet_id"].unique()
@@ -311,7 +311,7 @@ if selected_id:
                 st.success("✅ Snippet 已更新。")
                 st.rerun()
 
-# --- 刪除 Snippet ---
+    # --- 刪除 Snippet ---
 st.markdown("---")
 st.markdown("## 🗑️ 刪除 Snippet")
 selected_del_id = st.selectbox("選擇要刪除的 Snippet ID", unique_ids, key="delete")
