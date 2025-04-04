@@ -92,43 +92,24 @@ for i, row in df.iterrows():
         "key": f"chk_{row['snippet_id']}_{i}"
     })
 
-st.markdown("### 週視圖（複習排程）")
-st.markdown("""<style>
-.calendar {border-collapse: collapse; width: 100%;}
-.calendar td, .calendar th {
-    border: 1px solid #ccc; padding: 6px;
-    vertical-align: top; font-size: 0.85em;
-}
-.calendar th {background: #f0f0f0; text-align: center;}
-.calendar td {height: 100px; min-width: 120px;}
-.calendar .date {font-weight: bold; margin-bottom: 4px;}
-</style>""", unsafe_allow_html=True)
-
-import streamlit.components.v1 as components
-calendar_html = "<table class='calendar'>"
-calendar_html += "<tr><th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th></tr>"
-
+st.markdown("### 週視圖（含勾選項目）")
 for week in weeks:
-    calendar_html += "<tr>"
-    for day in week:
-        cell = ""
-        if day:
-            cell += f"<div class='date'>{day.month}/{day.day}</div>"
-            for entry in review_map.get(day.date(), []):
-                label = entry["short_id"]
-                checked = st.checkbox(label, value=entry["checked"], key=entry["key"])
-                if checked != entry["checked"]:
-                    sheet.values().update(
-                        spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!F{entry['row_index']+1}",
-                        valueInputOption="USER_ENTERED",
-                        body={"values": [["TRUE" if checked else "FALSE"]]}
-                    ).execute()
-        calendar_html += f"<td>{cell}</td>"
-    calendar_html += "</tr>"
-
-calendar_html += "</table>"
-components.html(calendar_html, height=600, scrolling=True)
+    cols = st.columns(7)
+    for i, day in enumerate(week):
+        with cols[i]:
+            if day:
+                st.markdown(f"**{day.month}/{day.day}**")
+                for item in review_map.get(day.date(), []):
+                    new_state = st.checkbox(item["short_id"], value=item["checked"], key=item["key"])
+                    if new_state != item["checked"]:
+                        sheet.values().update(
+                            spreadsheetId=spreadsheet_id,
+                            range=f"{sheet_tab}!F{item['row_index']+1}",
+                            valueInputOption="USER_ENTERED",
+                            body={"values": [["TRUE" if new_state else "FALSE"]]}
+                        ).execute()
+            else:
+                st.markdown(" ")
 
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
