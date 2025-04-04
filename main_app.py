@@ -74,7 +74,7 @@ for i, row in df.iterrows():
         "key": f"chk_{row['snippet_id']}_{i}"
     })
 
-# --- 週視圖（月曆格式） ---
+# --- 週視圖（支援跳頁） ---
 def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
     st.markdown("### 🗓️ 最近 4 週回顧任務")
 
