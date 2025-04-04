@@ -127,6 +127,7 @@ import time
                         user_checked = st.session_state.get(key, False)
                         if user_checked != item["checked"]:
                             sheet.values().update(
+                            api_update_count += 1
                         api_update_count += 1
                                 spreadsheetId=spreadsheet_id,
                                 range=f"{sheet_tab}!F{item['row_index']+1}",
@@ -307,6 +308,7 @@ if selected_id:
                 matching_indices = [i+1 for i, row in df.iterrows() if row["snippet_id"] == selected_id]
                 for row_index, row_data in zip(matching_indices, updated_rows):
                     sheet.values().update(
+                    api_update_count += 1
                         api_update_count += 1
                         spreadsheetId=spreadsheet_id,
                         range=f"{sheet_tab}!A{row_index+1}:F{row_index+1}",
