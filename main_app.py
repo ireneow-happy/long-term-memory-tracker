@@ -83,10 +83,11 @@ for i, row in df.iterrows():
 
 
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# 樣式修正：補上日期，移除表單按鈕，checkbox 即時寫入
+# CSS
 st.markdown("""
 <style>
     .week-header {
@@ -112,25 +113,22 @@ st.markdown("""
         padding-left: 2px;
         line-height: 1.4;
     }
-    .checkbox-list input[type=checkbox] {
-        margin-right: 4px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# 日期資料處理
+# 日期資料
 start_date = today - timedelta(days=today.weekday())
 end_date = start_date + timedelta(days=27)
 date_range = pd.date_range(start=start_date, end=end_date)
 padded_days = [None] * date_range[0].weekday() + list(date_range)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-# 星期標題列
+# 星期列
 cols = st.columns(7)
 for i, label in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
     cols[i].markdown(f"<div class='week-header'>{label}</div>", unsafe_allow_html=True)
 
-# 每週資料列 + 即時更新 checkbox 狀態
+# 各週資料列（一次性渲染整格內容）
 for week in weeks:
     cols = st.columns(7)
     for i, day in enumerate(week):
@@ -140,19 +138,20 @@ for week in weeks:
                 continue
 
             snippets = review_map.get(day.date(), [])
-            st.markdown(f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
-
+            html = f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div><div class='checkbox-list'>"
             for item in snippets:
-                current = st.checkbox(item["short_id"], value=item["checked"], key=item["key"])
-                if current != item["checked"]:
+                key = item["key"]
+                current = st.session_state.get(key, item["checked"])
+                new_value = st.checkbox(item["short_id"], value=current, key=key)
+                if new_value != item["checked"]:
                     sheet.values().update(
                         spreadsheetId=spreadsheet_id,
                         range=f"{sheet_tab}!F{item['row_index']+1}",
                         valueInputOption="USER_ENTERED",
-                        body={"values": [["TRUE" if current else "FALSE"]]}
+                        body={"values": [["TRUE" if new_value else "FALSE"]]}
                     ).execute()
-
-            st.markdown("</div>", unsafe_allow_html=True)
+            html += "</div></div>"
+            st.markdown(html, unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
