@@ -147,16 +147,17 @@ grid_days = [None] * first_day_idx + list(days_range)
 # 顯示每一天
 calendar_html = '<div class="calendar">'
 for d in grid_days:
+    cell_content = ""
     if d:
         day_str = f"{d.month}/{d.day}"
+        cell_content += f"<strong>{day_str}</strong><br>"
         snippets = review_map.get(d.date(), [])
-        cell = f"<strong>{day_str}</strong><br>"
         for item in snippets:
-            # 將 checkbox 與 snippet ID 顯示在文字旁
             key = item["key"]
             label = f"{item['short_id']}"
             full_id = item["snippet_id"]
-            checked = st.checkbox(f"{label}", value=item["checked"], key=key)
+            # 使用 markdown 替代 HTML 讓 checkbox 正常出現
+            checked = st.checkbox(f"{label}", value=item["checked"], key=key, help=f"Snippet ID: {full_id}")
             if checked != item["checked"]:
                 sheet.values().update(
                     spreadsheetId=spreadsheet_id,
@@ -164,9 +165,7 @@ for d in grid_days:
                     valueInputOption="USER_ENTERED",
                     body={"values": [["TRUE" if checked else "FALSE"]]}
                 ).execute()
-        calendar_html += f'<div class="day-cell">{cell}</div>'
-    else:
-        calendar_html += '<div class="day-cell">&nbsp;</div>'
+    calendar_html += f'<div class="day-cell">{cell_content}</div>' if d else '<div class="day-cell">&nbsp;</div>'
 calendar_html += '</div>'
 st.markdown(calendar_html, unsafe_allow_html=True)
 # --- 新增 Snippet 表單 ---
