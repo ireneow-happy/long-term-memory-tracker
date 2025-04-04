@@ -50,6 +50,7 @@ def render_weekly_calendar(review_map, sheet, spreadsheet_id, sheet_tab, today):
 
     st.markdown("""
 import time
+from google.oauth2 import service_account
     start_time = time.time()
     st.info("📊 正在載入週曆與勾選狀態，請稍候...")
     api_update_count = 0
@@ -143,7 +144,6 @@ import time
     st.set_page_config(page_title="記憶追蹤器", layout="centered")
     import pandas as pd
     import datetime
-    from google.oauth2 import service_account
     from googleapiclient.discovery import build
 
 # --- 初始化 session_state ---
