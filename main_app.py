@@ -55,75 +55,71 @@ if st.session_state["prev_snippet_id"] != new_snippet_id:
 # --- UI ---
 st.title("🌀 記憶追蹤器")
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# 計算近 4 週日期區間
-start_date = today - timedelta(days=today.weekday())  # 本週一
-end_date = start_date + timedelta(days=27)
-date_range = pd.date_range(start=start_date, end=end_date)
-
-df["review_date"] = pd.to_datetime(df["review_date"], errors="coerce")
-df["completed"] = df["completed"].fillna("FALSE")
-
-review_map = {}
-for i, row in df.iterrows():
-    if pd.isna(row["review_date"]):
-        continue
-    review_day = row["review_date"].date()
-    if review_day not in review_map:
-        review_map[review_day] = []
-    short_id = row["snippet_id"][-7:] if len(row["snippet_id"]) > 7 else row["snippet_id"]
-    review_map[review_day].append({
-        "snippet_id": row["snippet_id"],
-        "short_id": short_id,
-        "row_index": i + 1,
-        "checked": row["completed"] == "TRUE",
-        "key": f"chk_{row['snippet_id']}_{i}"
-    })
-
-# 自訂樣式
+# CSS 样式：符合你提供的表格設計
 st.markdown("""
 <style>
-.week-header { font-weight: bold; text-align: center; font-size: 14px; padding: 6px; }
-.day-box { border: 1px solid #ddd; min-height: 120px; padding: 4px; font-size: 12px; border-radius: 4px; vertical-align: top; }
-.day-title { font-weight: bold; font-size: 13px; text-align: left; margin-bottom: 4px; }
+    .week-header {
+        font-weight: bold;
+        text-align: center;
+        font-size: 13px;
+        padding: 4px;
+        border-bottom: 1px solid #ccc;
+    }
+    .calendar-cell {
+        border: 1px solid #ccc;
+        padding: 4px;
+        min-height: 80px;
+        font-size: 12px;
+        vertical-align: top;
+    }
+    .date-label {
+        font-weight: bold;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# 顯示週視圖（7天一列）
+# 日期範圍設定：從本週一開始共 28 天
+start_date = today - timedelta(days=today.weekday())
+end_date = start_date + timedelta(days=27)
+date_range = pd.date_range(start=start_date, end=end_date)
+
+# 整理成 7x4 格子格式
 padded_days = [None] * date_range[0].weekday() + list(date_range)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
-day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+# 星期列
 cols = st.columns(7)
-for i, name in enumerate(day_names):
-    cols[i].markdown(f"<div class='week-header'>{name}</div>", unsafe_allow_html=True)
+day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+for i in range(7):
+    cols[i].markdown(f"<div class='week-header'>{day_labels[i]}</div>", unsafe_allow_html=True)
 
+# 各週資料列
 for week in weeks:
     cols = st.columns(7)
-    for i, d in enumerate(week):
+    for i, day in enumerate(week):
         with cols[i]:
-            if d is None:
-                st.markdown("<div class='day-box'>&nbsp;</div>", unsafe_allow_html=True)
+            if day is None:
+                st.markdown("<div class='calendar-cell'>&nbsp;</div>", unsafe_allow_html=True)
                 continue
-            st.markdown(f"<div class='day-box'><div class='day-title'>{d.month}/{d.day}</div>", unsafe_allow_html=True)
-            tasks = review_map.get(d.date(), [])
-            for task in tasks:
-                checked = st.checkbox(task["short_id"], value=task["checked"], key=task["key"], help=task["snippet_id"])
-                if checked != task["checked"]:
+
+            st.markdown(f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
+            snippets = review_map.get(day.date(), [])
+            for item in snippets:
+                checked = st.checkbox(item["short_id"], value=item["checked"], key=item["key"], help=item["snippet_id"])
+                if checked != item["checked"]:
                     sheet.values().update(
                         spreadsheetId=spreadsheet_id,
-                        range=f"{sheet_tab}!F{task['row_index']+1}",
+                        range=f"{sheet_tab}!F{item['row_index']+1}",
                         valueInputOption="USER_ENTERED",
                         body={"values": [["TRUE" if checked else "FALSE"]]}
                     ).execute()
             st.markdown("</div>", unsafe_allow_html=True)
-
-# --- 其他功能保留不變：新增 / 修改 / 刪除 Snippet ---
-# （這段程式碼會直接保留使用者原始 main_app.py 裡的該區塊，不再重複列出）
-
-
 # --- 新增 Snippet 表單 ---
 st.markdown("## ➕ 新增 Snippet")
 with st.form("add_snippet_form"):
