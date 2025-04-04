@@ -77,10 +77,11 @@ for i, row in df.iterrows():
         "key": f"chk_{row['snippet_id']}_{i}"
     })
 
+
 # --- 週視圖（月曆格式） ---
 st.markdown("### 🗓️ 最近 4 週回顧任務")
 
-# CSS 样式：符合你提供的表格設計
+# CSS 样式：完全對齊你提供的設計
 st.markdown("""
 <style>
     .week-header {
@@ -92,25 +93,26 @@ st.markdown("""
     }
     .calendar-cell {
         border: 1px solid #ccc;
-        padding: 4px;
-        min-height: 80px;
+        padding: 6px 4px;
+        min-height: 100px;
         font-size: 12px;
         vertical-align: top;
     }
     .date-label {
         font-weight: bold;
         font-size: 12px;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
+        padding-left: 2px;
+        text-align: left;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 日期範圍設定：從本週一開始共 28 天
+# 日期資料
 start_date = today - timedelta(days=today.weekday())
 end_date = start_date + timedelta(days=27)
 date_range = pd.date_range(start=start_date, end=end_date)
 
-# 整理成 7x4 格子格式
 padded_days = [None] * date_range[0].weekday() + list(date_range)
 weeks = [padded_days[i:i+7] for i in range(0, len(padded_days), 7)]
 
@@ -120,7 +122,7 @@ day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 for i in range(7):
     cols[i].markdown(f"<div class='week-header'>{day_labels[i]}</div>", unsafe_allow_html=True)
 
-# 各週資料列
+# 週曆格子內容
 for week in weeks:
     cols = st.columns(7)
     for i, day in enumerate(week):
@@ -129,10 +131,11 @@ for week in weeks:
                 st.markdown("<div class='calendar-cell'>&nbsp;</div>", unsafe_allow_html=True)
                 continue
 
+            # 格內標題 + checkbox
             st.markdown(f"<div class='calendar-cell'><div class='date-label'>{day.month}/{day.day}</div>", unsafe_allow_html=True)
             snippets = review_map.get(day.date(), [])
             for item in snippets:
-                checked = st.checkbox(item["short_id"], value=item["checked"], key=item["key"], help=item["snippet_id"])
+                checked = st.checkbox(item["short_id"], value=item["checked"], key=item["key"])
                 if checked != item["checked"]:
                     sheet.values().update(
                         spreadsheetId=spreadsheet_id,
